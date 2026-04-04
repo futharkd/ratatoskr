@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env, sync::Arc};
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use bytes::Bytes;
 use http::HeaderMap;
 use serde::{Deserialize, Serialize};
@@ -186,15 +186,15 @@ mod tests {
     use std::{
         collections::{BTreeMap, HashMap},
         sync::{
-            atomic::{AtomicUsize, Ordering},
             Arc,
+            atomic::{AtomicUsize, Ordering},
         },
     };
 
     use async_trait::async_trait;
     use bytes::Bytes;
     use hmac::{Hmac, KeyInit, Mac};
-    use http::{header::HeaderValue, HeaderMap};
+    use http::{HeaderMap, header::HeaderValue};
     use sha2::Sha256;
     use tempfile::tempdir;
 
@@ -284,7 +284,8 @@ mod tests {
             security_profiles: Default::default(),
         };
 
-        std::env::set_var("TEST_WEBHOOK_SECRET", "top-secret");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var("TEST_WEBHOOK_SECRET", "top-secret") };
         let calls = Arc::new(AtomicUsize::new(0));
         let provider = Arc::new(MockProvider {
             calls: calls.clone(),

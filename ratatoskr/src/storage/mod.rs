@@ -1,7 +1,7 @@
 use std::{path::PathBuf, time::SystemTime};
 
 use anyhow::Context;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 
 #[derive(Clone)]
 pub struct SqliteIdempotencyStore {

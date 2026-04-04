@@ -10,10 +10,10 @@ mod verify;
 use std::{collections::HashMap, env, net::SocketAddr, sync::Arc};
 
 use anyhow::Context;
-use axum::{routing::get, Router};
+use axum::{Router, routing::get};
 use config::AppConfig;
 use dispatch::DispatchEngine;
-use providers::{infisical::InfisicalProvider, ProviderClient};
+use providers::{ProviderClient, infisical::InfisicalProvider};
 use storage::SqliteIdempotencyStore;
 use tokio::net::TcpListener;
 use tracing::info;
