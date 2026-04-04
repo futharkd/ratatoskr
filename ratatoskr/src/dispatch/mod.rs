@@ -193,7 +193,7 @@ mod tests {
 
     use async_trait::async_trait;
     use bytes::Bytes;
-    use hmac::{Hmac, Mac};
+    use hmac::{Hmac, KeyInit, Mac};
     use http::{header::HeaderValue, HeaderMap};
     use sha2::Sha256;
     use tempfile::tempdir;
