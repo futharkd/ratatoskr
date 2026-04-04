@@ -1,0 +1,55 @@
+[server]
+listen_addr = "127.0.0.1:8080"
+
+[defaults]
+replay_tolerance_seconds = 300
+http_timeout_seconds = 10
+max_retries = 3
+retry_backoff_millis = 300
+
+[storage]
+sqlite_path = "./ratatoskr.db"
+
+[[providers]]
+name = "infisical_main"
+type = "infisical"
+api_base_url = "https://app.infisical.com"
+client_id_env = "INFISICAL_CLIENT_ID"
+client_secret_env = "INFISICAL_CLIENT_SECRET"
+webhook_secret_env = "INFISICAL_WEBHOOK_SECRET"
+login_path = "/api/v1/auth/universal-auth/login"
+secrets_path = "/api/v3/secrets/raw"
+
+[security_profiles.strict]
+allow_env_vars = false
+require_signature = true
+replay_tolerance_seconds = 300
+
+[security_profiles.env_only_allowed]
+allow_env_vars = true
+require_signature = true
+replay_tolerance_seconds = 300
+
+[[services]]
+name = "caddy"
+provider = "infisical_main"
+security_profile = "strict"
+lifecycle = { action = "reload_caddy", admin_url = "http://caddy:2019" }
+secret_selector = { environment = "prod", secret_path = "/caddy", include_keys = ["CLOUDFLARE_API_TOKEN"] }
+output = { mode = "flat_files", directory = "/run/secrets/caddy_data", file_mode = 256 }
+
+[[services]]
+name = "authentik"
+provider = "infisical_main"
+security_profile = "strict"
+lifecycle = { action = "restart_container", docker_proxy_url = "http://docker-socket-proxy:2375", container = "authentik-server" }
+secret_selector = { environment = "prod", secret_path = "/authentik", include_keys = ["AUTHENTIK_SECRET_KEY", "AUTHENTIK_POSTGRESQL__PASSWORD"] }
+output = { mode = "flat_files", directory = "/run/secrets/authentik_data", file_mode = 256 }
+
+[[services]]
+name = "papra"
+provider = "infisical_main"
+security_profile = "strict"
+lifecycle = { action = "restart_container", docker_proxy_url = "http://docker-socket-proxy:2375", container = "papra" }
+secret_selector = { environment = "prod", secret_path = "/papra", include_keys = ["AUTH_SECRET", "DOCUMENT_STORAGE_DOCUMENT_KEY_ENCRYPTION_KEYS"] }
+output = { mode = "templated_yaml", file_path = "/run/secrets/papra_data/papra.config.yaml", template = "authSecret: {{AUTH_SECRET}}\ndocument:\n  keyEncryptionKeys: {{DOCUMENT_STORAGE_DOCUMENT_KEY_ENCRYPTION_KEYS}}\n", file_mode = 256 }

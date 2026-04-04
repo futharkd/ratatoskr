@@ -43,7 +43,10 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/healthz", get(http::healthz))
-        .route("/webhooks/:provider", axum::routing::post(http::webhook::handle))
+        .route(
+            "/webhooks/:provider",
+            axum::routing::post(http::webhook::handle),
+        )
         .with_state(app_state);
 
     let addr: SocketAddr = config.server.listen_addr.parse()?;
@@ -62,10 +65,15 @@ fn init_tracing() {
 fn build_provider_map(config: &AppConfig) -> HashMap<String, Arc<dyn ProviderClient>> {
     let mut map: HashMap<String, Arc<dyn ProviderClient>> = HashMap::new();
     for provider in &config.providers {
-        if let config::ProviderKind::Infisical(infisical) = &provider.kind {
-            let client = InfisicalProvider::new(provider.name.clone(), infisical.clone());
-            map.insert(provider.name.clone(), Arc::new(client));
-        }
+        let config::ProviderKind::Infisical(infisical) = &provider.kind;
+        let client = InfisicalProvider::new(
+            provider.name.clone(),
+            infisical.clone(),
+            config.defaults.max_retries,
+            config.defaults.retry_backoff_millis,
+            config.defaults.http_timeout_seconds,
+        );
+        map.insert(provider.name.clone(), Arc::new(client));
     }
     map
 }

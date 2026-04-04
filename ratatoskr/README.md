@@ -1,5 +1,44 @@
 # yggdrasil/ratatoskr
 
-Ratatoskr receives signed webhooks from cloud services, verifies payloads with HMAC-SHA256, and safely executes predefined sync jobs (git deploys to pinned SHAs, SOPS/age secret materialization) with systemd sandboxing, SQLite/PostgreSQL idempotency tracking, and atomic filesystem operations.
+Ratatoskr is a configurable Rust webhook worker for secret delivery and lifecycle orchestration in lightweight Docker Compose deployments.
 
-Allows setting custom logic (though defaults are given) for specific operations, from different cloud providers (e.g. GitHub for Git repos, Infisical for secrets management, ...)
+## What It Does
+
+- Accepts signed webhooks from providers (Infisical first).
+- Verifies HMAC-SHA256 signatures and replay window timestamps.
+- Deduplicates webhook events in SQLite for idempotent processing.
+- Fetches scoped secrets through provider adapters.
+- Renders outputs per service (flat files or templated YAML today).
+- Applies lifecycle hooks (`no_action`, `reload_caddy`, `restart_container`).
+
+## Quick Start
+
+1. Set provider credentials and webhook secret env vars:
+   - `INFISICAL_CLIENT_ID`
+   - `INFISICAL_CLIENT_SECRET`
+   - `INFISICAL_WEBHOOK_SECRET`
+2. Copy and adapt [`examples/ratatoskr.example.toml`](examples/ratatoskr.example.toml).
+3. Run:
+   - `cargo run -- examples/ratatoskr.example.toml`
+4. Send signed webhook payloads to:
+   - `POST /webhooks/<provider-name>`
+
+## Configuration Model
+
+Ratatoskr is data-driven:
+
+- `providers`: authentication and fetch backends.
+- `defaults`: safe baseline behavior (replay window, retries, timeout).
+- `services`: service-by-service policy:
+  - selector (`environment`, `secret_path`, optional key filters)
+  - render mode and destination
+  - lifecycle action
+  - security profile binding
+- `security_profiles`: optional named policy bundles for teams with mixed requirements.
+
+### Security Profiles
+
+- `strict`: file-based delivery, signature required, replay checks enabled.
+- `env_only_allowed`: allows lower-sensitivity setups where env vars are accepted by policy.
+
+You can mix profiles per service in one deployment without changing code.
