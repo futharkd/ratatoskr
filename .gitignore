@@ -1,0 +1,37 @@
+# Rust
+/target/
+**/target/
+**/*.rs.bk
+
+# Cargo
+Cargo.lock
+.cargo/
+.cargo-ok
+
+# Rust build scripts
+*.rlib
+
+# Build output
+*.exe
+*.dll
+*.dylib
+*.so
+
+# IDEs and editors
+/.idea/
+.vscode/
+*.swp
+*.swo
+
+# Other files
+*.log
+
+# Agentic folders
+/.cursor/
+.cursor/
+__agentic__/
+.agentic/
+agentic/
+
+# WIP files
+*.wip.*
