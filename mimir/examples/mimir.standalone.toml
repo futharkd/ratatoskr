@@ -1,3 +1,4 @@
-[mimir.placeholders]
+# Root `MimirConfig` TOML (use `[mimir.placeholders]` only inside a larger app file under a `[mimir]` table).
+[placeholders]
 env = false
 file = false

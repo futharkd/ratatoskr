@@ -11,9 +11,7 @@ pub struct LifecycleExecutor {
 
 impl LifecycleExecutor {
     pub fn new() -> Self {
-        Self {
-            client: Client::new(),
-        }
+        Self::default()
     }
 
     pub async fn execute(&self, action: &LifecycleAction) -> anyhow::Result<()> {
@@ -61,6 +59,14 @@ impl LifecycleExecutor {
             ));
         }
         Ok(())
+    }
+}
+
+impl Default for LifecycleExecutor {
+    fn default() -> Self {
+        Self {
+            client: Client::new(),
+        }
     }
 }
 

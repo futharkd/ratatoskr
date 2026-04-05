@@ -10,15 +10,15 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use hmac::{Hmac, KeyInit, Mac};
 use http::{HeaderMap, header::HeaderValue};
-use mimir::config::{MimirConfig, PlaceholderOverride};
 use sha2::Sha256;
 use tempfile::tempdir;
 
 use crate::{
     config::{
         AppConfig, ConfigIncludes, DefaultsConfig, InfisicalProviderConfig, LifecycleAction,
-        OutputConfig, ProviderConfig, ProviderKind, SecretSelector, SecurityProfileConfig,
-        ServerConfig, ServiceConfig, StorageBackend, StorageConfig,
+        MimirConfig, OutputConfig, PlaceholderOverride, ProviderConfig, ProviderKind,
+        SecretSelector, SecurityProfileConfig, ServerConfig, ServiceConfig, StorageBackend,
+        StorageConfig,
     },
     providers::{ProviderClient, SecretFetchRequest, SecretMap},
     storage::{IdempotencyStore, sqlite::SqliteIdempotencyStore},

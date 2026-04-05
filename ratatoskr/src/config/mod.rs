@@ -1,5 +1,7 @@
 //! Application configuration schema and split-file loading.
 
+pub use mimir::config::{MimirConfig, PlaceholderOverride};
+
 mod app;
 mod defaults;
 mod fragments;
