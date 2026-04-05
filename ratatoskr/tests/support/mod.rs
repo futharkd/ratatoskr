@@ -100,8 +100,25 @@ pub fn empty_app_config(sqlite_path: PathBuf) -> AppConfig {
     }
 }
 
-/// One Infisical provider in config (for signature verification) + one matching service.
-pub fn webhook_sample_app_config(sqlite_path: PathBuf, output_dir: PathBuf) -> AppConfig {
+/// Default Infisical provider block for webhook integration tests (mock or stub server).
+pub fn sample_infisical_provider_config(api_base_url: impl Into<String>) -> InfisicalProviderConfig {
+    InfisicalProviderConfig {
+        api_base_url: api_base_url.into(),
+        client_id: "x".to_string(),
+        client_secret: "y".to_string(),
+        webhook_secret: "top-secret".to_string(),
+        login_path: "/api/v1/auth/universal-auth/login".to_string(),
+        secrets_path: "/api/v3/secrets/raw".to_string(),
+    }
+}
+
+/// One Infisical provider + one matching service; `api_base_url` targets the real cloud or a test stub.
+pub fn infisical_webhook_app_config(
+    api_base_url: impl Into<String>,
+    sqlite_path: PathBuf,
+    output_dir: PathBuf,
+) -> AppConfig {
+    let api_base_url = api_base_url.into();
     AppConfig {
         server: ServerConfig {
             listen_addr: "127.0.0.1:0".to_string(),
@@ -121,14 +138,7 @@ pub fn webhook_sample_app_config(sqlite_path: PathBuf, output_dir: PathBuf) -> A
         mimir: MimirConfig::default(),
         providers: vec![ProviderConfig {
             name: "infisical_main".to_string(),
-            kind: ProviderKind::Infisical(InfisicalProviderConfig {
-                api_base_url: "https://app.infisical.com".to_string(),
-                client_id: "x".to_string(),
-                client_secret: "y".to_string(),
-                webhook_secret: "top-secret".to_string(),
-                login_path: "/api/v1/auth/universal-auth/login".to_string(),
-                secrets_path: "/api/v3/secrets/raw".to_string(),
-            }),
+            kind: ProviderKind::Infisical(sample_infisical_provider_config(api_base_url)),
         }],
         services: vec![ServiceConfig {
             name: "papra".to_string(),
@@ -148,6 +158,27 @@ pub fn webhook_sample_app_config(sqlite_path: PathBuf, output_dir: PathBuf) -> A
         }],
         security_profiles: Default::default(),
     }
+}
+
+/// One Infisical provider in config (for signature verification) + one matching service.
+pub fn webhook_sample_app_config(sqlite_path: PathBuf, output_dir: PathBuf) -> AppConfig {
+    infisical_webhook_app_config("https://app.infisical.com", sqlite_path, output_dir)
+}
+
+/// Build [`DispatchEngine`] with real provider clients wired from `cfg.providers`.
+pub async fn engine_with_config_providers(cfg: AppConfig) -> anyhow::Result<Arc<DispatchEngine>> {
+    let mut providers = HashMap::<String, Arc<dyn ProviderClient>>::new();
+    for provider in &cfg.providers {
+        let client = provider
+            .kind
+            .clone()
+            .into_client(provider.name.clone(), &cfg.defaults)?;
+        providers.insert(provider.name.clone(), client);
+    }
+    let store: Arc<dyn IdempotencyStore> = Arc::new(
+        SqliteIdempotencyStore::new(&cfg.storage.sqlite_path).await?,
+    );
+    Ok(Arc::new(DispatchEngine::new(cfg, providers, store)))
 }
 
 pub async fn engine_empty(sqlite_path: PathBuf) -> Arc<DispatchEngine> {
