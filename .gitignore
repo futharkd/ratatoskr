@@ -35,3 +35,6 @@ agentic/
 
 # WIP files
 *.wip.*
+
+# Local env files (e.g. live Infisical test config); never commit secrets
+ratatoskr/.env

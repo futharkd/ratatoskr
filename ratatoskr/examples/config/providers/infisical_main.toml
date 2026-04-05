@@ -2,8 +2,8 @@
 name = "infisical_main"
 type = "infisical"
 api_base_url = "https://app.infisical.com"
+# Project / workspace id from Infisical (Settings → Project). Use {env:…} if you prefer.
+project_id = "{env:INFISICAL_PROJECT_ID}"
 client_id = "{env:INFISICAL_CLIENT_ID}"
 client_secret = "{env:INFISICAL_CLIENT_SECRET}"
 webhook_secret = "{env:INFISICAL_WEBHOOK_SECRET}"
-login_path = "/api/v1/auth/universal-auth/login"
-secrets_path = "/api/v3/secrets/raw"

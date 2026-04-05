@@ -30,10 +30,11 @@ pub async fn handle(
             (StatusCode::OK, Json(json!(result))).into_response()
         }
         Err(err) => {
-            error!(provider = provider, error = %err, "webhook processing failed");
+            let message = format!("{err:#}");
+            error!(provider = provider, error = %message, "webhook processing failed");
             (
                 StatusCode::BAD_REQUEST,
-                Json(json!({ "error": err.to_string() })),
+                Json(json!({ "error": message })),
             )
                 .into_response()
         }

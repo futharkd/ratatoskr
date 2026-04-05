@@ -79,11 +79,10 @@ async fn deduplicates_duplicate_webhook_events() {
             name: "infisical_main".to_string(),
             kind: ProviderKind::Infisical(InfisicalProviderConfig {
                 api_base_url: "https://app.infisical.com".to_string(),
+                project_id: "dummy".to_string(),
                 client_id: "x".to_string(),
                 client_secret: "y".to_string(),
                 webhook_secret: "top-secret".to_string(),
-                login_path: "/api/v1/auth/universal-auth/login".to_string(),
-                secrets_path: "/api/v3/secrets/raw".to_string(),
             }),
         }],
         services: vec![ServiceConfig {
@@ -198,11 +197,10 @@ async fn applies_profile_placeholder_policy() {
             name: "infisical_main".to_string(),
             kind: ProviderKind::Infisical(InfisicalProviderConfig {
                 api_base_url: "https://app.infisical.com".to_string(),
+                project_id: "dummy".to_string(),
                 client_id: "x".to_string(),
                 client_secret: "y".to_string(),
                 webhook_secret: "top-secret".to_string(),
-                login_path: "/api/v1/auth/universal-auth/login".to_string(),
-                secrets_path: "/api/v3/secrets/raw".to_string(),
             }),
         }],
         services: vec![ServiceConfig {
@@ -291,11 +289,10 @@ async fn service_override_takes_precedence_over_profile() {
             name: "infisical_main".to_string(),
             kind: ProviderKind::Infisical(InfisicalProviderConfig {
                 api_base_url: "https://app.infisical.com".to_string(),
+                project_id: "dummy".to_string(),
                 client_id: "x".to_string(),
                 client_secret: "y".to_string(),
                 webhook_secret: "top-secret".to_string(),
-                login_path: "/api/v1/auth/universal-auth/login".to_string(),
-                secrets_path: "/api/v3/secrets/raw".to_string(),
             }),
         }],
         services: vec![ServiceConfig {

@@ -2,8 +2,10 @@ use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 use anyhow::{Context, anyhow};
 use async_trait::async_trait;
-use reqwest::Client;
-use serde_json::Value;
+use infisical::secrets::ListSecretsRequest;
+use infisical::{AuthMethod, Client, InfisicalError};
+use reqwest::StatusCode;
+use tokio::sync::Mutex;
 use tokio::time::sleep;
 
 use crate::config::{DefaultsConfig, SecretSelector};
@@ -12,15 +14,39 @@ use crate::providers::{BuildProviderFromConfig, ProviderClient, SecretFetchReque
 use super::InfisicalProviderConfig;
 use mimir::placeholders::{PlaceholderPolicy, resolve_placeholders};
 
-use super::models::{LoginResponse, parse_secret_items};
+fn should_clear_sdk_client(err: &InfisicalError) -> bool {
+    matches!(
+        err,
+        InfisicalError::NotAuthenticated
+            | InfisicalError::InvalidAuthMethod
+            | InfisicalError::InvalidAuthHeaderValue(_)
+    ) || matches!(
+        err,
+        InfisicalError::HttpError { status, .. }
+            if *status == StatusCode::UNAUTHORIZED || *status == StatusCode::FORBIDDEN
+    )
+}
 
-#[derive(Clone)]
+/// Normalize folder path for the Infisical SDK (leading slash; empty becomes `/`).
+fn list_secrets_path(secret_path: &str) -> String {
+    let t = secret_path.trim();
+    if t.is_empty() {
+        return "/".to_string();
+    }
+    if t.starts_with('/') {
+        t.to_string()
+    } else {
+        format!("/{t}")
+    }
+}
+
 pub struct InfisicalProvider {
     name: String,
     config: InfisicalProviderConfig,
-    client: Client,
     max_retries: usize,
     retry_backoff_millis: u64,
+    http_timeout_seconds: u64,
+    sdk: Mutex<Option<Client>>,
 }
 
 impl InfisicalProvider {
@@ -31,48 +57,14 @@ impl InfisicalProvider {
         retry_backoff_millis: u64,
         http_timeout_seconds: u64,
     ) -> Self {
-        let client = Client::builder()
-            .timeout(Duration::from_secs(http_timeout_seconds))
-            .build()
-            .unwrap_or_else(|_| Client::new());
         Self {
             name,
             config,
-            client,
             max_retries,
             retry_backoff_millis,
+            http_timeout_seconds,
+            sdk: Mutex::new(None),
         }
-    }
-
-    async fn login(&self) -> anyhow::Result<String> {
-        let client_id = self.resolve_provider_secret(&self.config.client_id)?;
-        let client_secret = self.resolve_provider_secret(&self.config.client_secret)?;
-
-        let url = format!(
-            "{}{}",
-            self.config.api_base_url.trim_end_matches('/'),
-            self.config.login_path
-        );
-        let body = serde_json::json!({
-            "clientId": client_id,
-            "clientSecret": client_secret,
-        });
-
-        let response = self
-            .client
-            .post(url)
-            .json(&body)
-            .send()
-            .await
-            .context("infisical login request failed")?;
-        if !response.status().is_success() {
-            return Err(anyhow!("infisical login failed with {}", response.status()));
-        }
-        let payload: LoginResponse = response
-            .json()
-            .await
-            .context("invalid infisical login response")?;
-        Ok(payload.access_token)
     }
 
     fn resolve_provider_secret(&self, raw_value: &str) -> anyhow::Result<String> {
@@ -84,50 +76,83 @@ impl InfisicalProvider {
             .with_context(|| "failed resolving provider placeholder values")
     }
 
-    async fn fetch_with_token(
-        &self,
-        access_token: &str,
-        selector: &SecretSelector,
-    ) -> anyhow::Result<SecretMap> {
-        let url = format!(
-            "{}{}",
-            self.config.api_base_url.trim_end_matches('/'),
-            self.config.secrets_path
-        );
-        let response = self
-            .client
-            .get(url)
-            .bearer_auth(access_token)
-            .query(&[
-                ("environment", selector.environment.as_str()),
-                ("secretPath", selector.secret_path.as_str()),
-            ])
-            .send()
-            .await
-            .context("infisical secret fetch failed")?;
-        if !response.status().is_success() {
-            return Err(anyhow!(
-                "infisical secret fetch failed with {}",
-                response.status()
-            ));
+    async fn ensure_logged_in_client(&self) -> anyhow::Result<()> {
+        let mut guard = self.sdk.lock().await;
+        if guard.is_some() {
+            return Ok(());
         }
 
-        let payload: Value = response
-            .json()
+        let base = self.config.api_base_url.trim_end_matches('/').to_string();
+        let timeout = Duration::from_secs(self.http_timeout_seconds.max(1));
+
+        let mut client = Client::builder()
+            .base_url(base)
+            .request_timeout(timeout)
+            .user_agent("ratatoskr")
+            .build()
             .await
-            .context("invalid infisical secret response payload")?;
-        let secret_items = parse_secret_items(payload)?;
+            .context("failed building Infisical SDK client")?;
+
+        let client_id = self.resolve_provider_secret(&self.config.client_id)?;
+        let client_secret = self.resolve_provider_secret(&self.config.client_secret)?;
+        let auth = AuthMethod::new_universal_auth(client_id, client_secret);
+        client
+            .login(auth)
+            .await
+            .context("Infisical universal-auth login failed")?;
+
+        *guard = Some(client);
+        Ok(())
+    }
+
+    async fn list_secrets_with_sdk(&self, selector: &SecretSelector) -> anyhow::Result<SecretMap> {
+        self.ensure_logged_in_client().await?;
+
+        let project_id = self.resolve_provider_secret(&self.config.project_id)?;
+        let path = list_secrets_path(&selector.secret_path);
+
+        let request = ListSecretsRequest::builder(project_id, &selector.environment)
+            .path(path)
+            .recursive(true)
+            .build();
+
+        let guard = self.sdk.lock().await;
+        let client = guard
+            .as_ref()
+            .ok_or_else(|| anyhow!("Infisical SDK client missing after login"))?;
+
+        let listed = client
+            .secrets()
+            .list(request)
+            .await
+            .context("Infisical list secrets failed")?;
 
         let mut out = BTreeMap::new();
-        for item in secret_items {
+        for item in listed {
             if !selector.include_keys.is_empty()
                 && !selector.include_keys.contains(&item.secret_key)
             {
                 continue;
             }
-            out.insert(item.secret_key, item.secret_value.unwrap_or_default());
+            out.insert(item.secret_key, item.secret_value);
         }
         Ok(out)
+    }
+
+    async fn fetch_secrets_inner(&self, selector: &SecretSelector) -> anyhow::Result<SecretMap> {
+        match self.list_secrets_with_sdk(selector).await {
+            Ok(m) => Ok(m),
+            Err(e) => {
+                if e.root_cause()
+                    .downcast_ref::<InfisicalError>()
+                    .is_some_and(should_clear_sdk_client)
+                {
+                    let mut guard = self.sdk.lock().await;
+                    *guard = None;
+                }
+                Err(e)
+            }
+        }
     }
 }
 
@@ -136,11 +161,8 @@ impl ProviderClient for InfisicalProvider {
     async fn fetch_secrets(&self, request: SecretFetchRequest) -> anyhow::Result<SecretMap> {
         let mut last_error: Option<anyhow::Error> = None;
         for attempt in 0..self.max_retries {
-            match self.login().await {
-                Ok(token) => match self.fetch_with_token(&token, &request.selector).await {
-                    Ok(secrets) => return Ok(secrets),
-                    Err(err) => last_error = Some(err),
-                },
+            match self.fetch_secrets_inner(&request.selector).await {
+                Ok(secrets) => return Ok(secrets),
                 Err(err) => last_error = Some(err),
             }
             let backoff_ms = self

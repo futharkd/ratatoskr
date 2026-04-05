@@ -37,6 +37,7 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     env:
       RATATOSKR_INFISICAL_API_BASE_URL: ${{ vars.RATATOSKR_INFISICAL_API_BASE_URL }}
+      RATATOSKR_INFISICAL_PROJECT_ID: ${{ vars.RATATOSKR_INFISICAL_PROJECT_ID }}
       RATATOSKR_INFISICAL_CLIENT_ID: ${{ secrets.RATATOSKR_INFISICAL_CLIENT_ID }}
       RATATOSKR_INFISICAL_CLIENT_SECRET: ${{ secrets.RATATOSKR_INFISICAL_CLIENT_SECRET }}
       RATATOSKR_INFISICAL_ENVIRONMENT: ${{ vars.RATATOSKR_INFISICAL_ENVIRONMENT }}

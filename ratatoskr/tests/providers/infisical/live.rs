@@ -1,6 +1,11 @@
-//! Opt-in tests against a real Infisical project. See `DEVELOPMENT.md` in this crate.
+//! Opt-in **outbound-only** tests against a real Infisical project (SDK `fetch_secrets`; no
+//! listener, no inbound webhooks). See `DEVELOPMENT.md` in the crate root.
 //! Run with: `cargo test -p ratatoskr --test providers -- --ignored --nocapture`
+//!
+//! If `ratatoskr/.env` exists, it is loaded first (same keys as below). Already-set
+//! environment variables take precedence over the file.
 
+use std::path::Path;
 use std::sync::Arc;
 
 use ratatoskr::{
@@ -10,9 +15,16 @@ use ratatoskr::{
 
 use crate::support;
 
+fn load_live_infisical_dotenv() {
+    let env_path = Path::new(env!("CARGO_MANIFEST_DIR")).join(".env");
+    let _ = dotenvy::from_path(env_path);
+}
+
 #[tokio::test]
 #[ignore = "requires Infisical credentials in env; see DEVELOPMENT.md"]
-async fn infisical_live_fetch_secrets() {
+async fn fetch_secrets() {
+    load_live_infisical_dotenv();
+
     let base = std::env::var("RATATOSKR_INFISICAL_API_BASE_URL")
         .expect("RATATOSKR_INFISICAL_API_BASE_URL (e.g. https://app.infisical.com)");
     let client_id =
@@ -23,11 +35,14 @@ async fn infisical_live_fetch_secrets() {
         .expect("RATATOSKR_INFISICAL_ENVIRONMENT (e.g. dev)");
     let secret_path = std::env::var("RATATOSKR_INFISICAL_SECRET_PATH")
         .expect("RATATOSKR_INFISICAL_SECRET_PATH (e.g. /my-app)");
+    let project_id = std::env::var("RATATOSKR_INFISICAL_PROJECT_ID")
+        .expect("RATATOSKR_INFISICAL_PROJECT_ID (Infisical project / workspace id)");
 
     let expect_key = std::env::var("RATATOSKR_INFISICAL_EXPECT_KEY")
         .unwrap_or_else(|_| "AUTH_SECRET".to_string());
 
     let mut provider_cfg = support::sample_infisical_provider_config(base);
+    provider_cfg.project_id = project_id;
     provider_cfg.client_id = client_id;
     provider_cfg.client_secret = client_secret;
     if let Ok(s) = std::env::var("RATATOSKR_INFISICAL_WEBHOOK_SECRET") {
@@ -48,13 +63,18 @@ async fn infisical_live_fetch_secrets() {
     let secrets = client
         .fetch_secrets(SecretFetchRequest {
             selector: SecretSelector {
-                environment,
-                secret_path,
+                environment: environment.clone(),
+                secret_path: secret_path.clone(),
                 include_keys: Vec::new(),
             },
         })
         .await
-        .expect("fetch secrets from Infisical");
+        .unwrap_or_else(|e| {
+            eprintln!(
+                "Infisical live test: fetch_secrets failed (environment={environment:?}, secret_path={secret_path:?}):\n{e:#}"
+            );
+            panic!("fetch secrets from Infisical");
+        });
 
     assert!(
         secrets.contains_key(&expect_key),

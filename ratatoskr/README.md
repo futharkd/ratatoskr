@@ -15,7 +15,8 @@ Ratatoskr owns its application schema, and uses the shared `mimir` crate for reu
 
 ## Quick Start
 
-1. Set provider credentials and webhook secret env vars:
+1. Set provider env vars referenced from the example config (see [`examples/config/providers/infisical_main.toml`](examples/config/providers/infisical_main.toml)):
+   - `INFISICAL_PROJECT_ID` (project / workspace id from Infisical)
    - `INFISICAL_CLIENT_ID`
    - `INFISICAL_CLIENT_SECRET`
    - `INFISICAL_WEBHOOK_SECRET`

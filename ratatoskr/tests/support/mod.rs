@@ -106,11 +106,10 @@ pub fn sample_infisical_provider_config(
 ) -> InfisicalProviderConfig {
     InfisicalProviderConfig {
         api_base_url: api_base_url.into(),
+        project_id: "stub-workspace-id".to_string(),
         client_id: "x".to_string(),
         client_secret: "y".to_string(),
         webhook_secret: "top-secret".to_string(),
-        login_path: "/api/v1/auth/universal-auth/login".to_string(),
-        secrets_path: "/api/v3/secrets/raw".to_string(),
     }
 }
 
@@ -160,6 +159,20 @@ pub fn infisical_webhook_app_config(
         }],
         security_profiles: Default::default(),
     }
+}
+
+/// Same as [`infisical_webhook_app_config`] but with a non-empty `include_keys` filter on the service.
+pub fn infisical_webhook_app_config_with_include_keys(
+    api_base_url: impl Into<String>,
+    sqlite_path: PathBuf,
+    output_dir: PathBuf,
+    include_keys: Vec<String>,
+) -> AppConfig {
+    let mut cfg = infisical_webhook_app_config(api_base_url, sqlite_path, output_dir);
+    if let Some(svc) = cfg.services.first_mut() {
+        svc.secret_selector.include_keys = include_keys;
+    }
+    cfg
 }
 
 /// One Infisical provider in config (for signature verification) + one matching service.
