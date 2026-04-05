@@ -12,6 +12,7 @@ use tower::ServiceExt;
 use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+use super::fixture as fx;
 use crate::support;
 
 async fn mount_sdk_login_ok(mock: &MockServer) {
@@ -30,7 +31,7 @@ async fn mount_sdk_login_ok(mock: &MockServer) {
 async fn mount_sdk_list_ok(mock: &MockServer, secrets: serde_json::Value) {
     Mock::given(method("GET"))
         .and(path("/api/v3/secrets/raw"))
-        .and(query_param("workspaceId", "stub-workspace-id"))
+        .and(query_param("workspaceId", fx::STUB_WORKSPACE_ID))
         .and(query_param("environment", "prod"))
         .and(query_param("secretPath", "/papra"))
         .and(query_param("expandSecretReferences", "true"))
@@ -46,10 +47,10 @@ async fn mount_sdk_list_ok(mock: &MockServer, secrets: serde_json::Value) {
 
 async fn post_signed_webhook(app: &axum::Router, body: &[u8]) -> axum::response::Response {
     let body = Bytes::copy_from_slice(body);
-    let headers = support::signed_headers("top-secret", &body);
+    let headers = fx::signed_headers(fx::WEBHOOK_SIGNING_SECRET, &body);
     let mut req_builder = Request::builder()
         .method("POST")
-        .uri("/webhooks/infisical_main")
+        .uri(format!("/webhooks/{}", fx::PROVIDER_NAME))
         .header("content-type", "application/json");
     for (name, value) in headers.iter() {
         req_builder = req_builder.header(name, value);
@@ -67,7 +68,7 @@ async fn webhook_fetches_and_writes_flat_files() {
         serde_json::json!([
             {
                 "_id": "stub-id",
-                "workspace": "stub-workspace-id",
+                "workspace": fx::STUB_WORKSPACE_ID,
                 "version": 1,
                 "type": "shared",
                 "environment": "prod",
@@ -84,7 +85,7 @@ async fn webhook_fetches_and_writes_flat_files() {
     let out = temp.path().join("secrets");
     std::fs::create_dir_all(&out).unwrap();
 
-    let cfg = support::infisical_webhook_app_config(mock_server.uri(), db, out.clone());
+    let cfg = fx::papra_app_config(mock_server.uri(), db, out.clone());
     let engine = support::engine_with_config_providers(cfg).await.unwrap();
     let app = support::app_with_engine(engine);
 
@@ -115,7 +116,7 @@ async fn webhook_applies_include_keys_filter() {
         serde_json::json!([
             {
                 "_id": "a",
-                "workspace": "stub-workspace-id",
+                "workspace": fx::STUB_WORKSPACE_ID,
                 "version": 1,
                 "type": "shared",
                 "environment": "prod",
@@ -125,7 +126,7 @@ async fn webhook_applies_include_keys_filter() {
             },
             {
                 "_id": "b",
-                "workspace": "stub-workspace-id",
+                "workspace": fx::STUB_WORKSPACE_ID,
                 "version": 1,
                 "type": "shared",
                 "environment": "prod",
@@ -142,7 +143,7 @@ async fn webhook_applies_include_keys_filter() {
     let out = temp.path().join("secrets");
     std::fs::create_dir_all(&out).unwrap();
 
-    let cfg = support::infisical_webhook_app_config_with_include_keys(
+    let cfg = fx::papra_app_config_with_include_keys(
         mock_server.uri(),
         db,
         out.clone(),
@@ -170,7 +171,7 @@ async fn webhook_secret_list_http_error_surfaces_as_bad_request() {
 
     Mock::given(method("GET"))
         .and(path("/api/v3/secrets/raw"))
-        .and(query_param("workspaceId", "stub-workspace-id"))
+        .and(query_param("workspaceId", fx::STUB_WORKSPACE_ID))
         .and(query_param("environment", "prod"))
         .and(query_param("secretPath", "/papra"))
         .and(query_param("expandSecretReferences", "true"))
@@ -188,7 +189,7 @@ async fn webhook_secret_list_http_error_surfaces_as_bad_request() {
     let out = temp.path().join("secrets");
     std::fs::create_dir_all(&out).unwrap();
 
-    let cfg = support::infisical_webhook_app_config(mock_server.uri(), db, out);
+    let cfg = fx::papra_app_config(mock_server.uri(), db, out);
     let engine = support::engine_with_config_providers(cfg).await.unwrap();
     let app = support::app_with_engine(engine);
 

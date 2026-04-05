@@ -5,14 +5,14 @@ use http_body_util::BodyExt;
 use tempfile::tempdir;
 use tower::ServiceExt;
 
-use crate::support;
+use crate::{infisical_fixture as fx, support};
 
 async fn post_signed(app: axum::Router, body: &Bytes) -> (http::StatusCode, serde_json::Value) {
     let mut req_builder = Request::builder()
         .method("POST")
-        .uri("/webhooks/infisical_main")
+        .uri(format!("/webhooks/{}", fx::PROVIDER_NAME))
         .header("content-type", "application/json");
-    let headers = support::signed_headers("top-secret", body);
+    let headers = fx::signed_headers(fx::WEBHOOK_SIGNING_SECRET, body);
     for (name, value) in headers.iter() {
         req_builder = req_builder.header(name, value);
     }
@@ -32,7 +32,7 @@ async fn duplicate_delivery_skips_second_apply() {
     let db = temp.path().join("idem.db");
     let out = temp.path().join("secrets");
     std::fs::create_dir_all(&out).unwrap();
-    let cfg = support::webhook_sample_app_config(db, out);
+    let cfg = fx::papra_app_config_for_mock_provider(db, out);
     let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let engine = support::engine_with_webhook_mock(cfg, calls.clone()).await;
     let app = support::app_with_engine(engine);

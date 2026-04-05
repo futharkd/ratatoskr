@@ -1,7 +1,4 @@
-//! Infisical provider integration tests.
-//!
-//! - [`stub`] — Hermetic HTTP stubs (wiremock) + official SDK + full `POST /webhooks/...` dispatch.
-//! - [`live`] — Opt-in tests against real Infisical (ignored by default).
+//! Infisical provider integration tests (hermetic stubs only).
 
-mod live;
+mod fixture;
 mod stub;

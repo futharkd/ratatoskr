@@ -1,4 +1,4 @@
-//! Provider integration tests. See `DEVELOPMENT.md` in the crate root.
+//! Provider integration tests (hermetic stubs). See `DEVELOPMENT.md` in the crate root.
 
 mod support;
 

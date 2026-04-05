@@ -1,5 +1,8 @@
 //! HTTP webhook integration tests (one `cargo test` section for all webhook cases).
 
+#[path = "providers/infisical/fixture.rs"]
+mod infisical_fixture;
+
 mod support;
 
 #[path = "webhook/bad_request.rs"]

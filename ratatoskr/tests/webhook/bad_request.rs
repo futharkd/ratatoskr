@@ -5,7 +5,7 @@ use http_body_util::BodyExt;
 use tempfile::tempdir;
 use tower::ServiceExt;
 
-use crate::support;
+use crate::{infisical_fixture as fx, support};
 
 #[tokio::test]
 async fn webhook_missing_signature_returns_400() {
@@ -13,7 +13,7 @@ async fn webhook_missing_signature_returns_400() {
     let db = temp.path().join("bad.db");
     let out = temp.path().join("out");
     std::fs::create_dir_all(&out).unwrap();
-    let cfg = support::webhook_sample_app_config(db, out);
+    let cfg = fx::papra_app_config_for_mock_provider(db, out);
     let engine = support::engine_with_webhook_mock(
         cfg,
         std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
@@ -27,7 +27,7 @@ async fn webhook_missing_signature_returns_400() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/webhooks/infisical_main")
+                .uri(format!("/webhooks/{}", fx::PROVIDER_NAME))
                 .header("content-type", "application/json")
                 .body(Body::from(body))
                 .unwrap(),
