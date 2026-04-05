@@ -1,0 +1,7 @@
+[[services]]
+name = "authentik"
+provider = "infisical_main"
+security_profile = "strict"
+lifecycle = { action = "restart_container", docker_proxy_url = "http://docker-socket-proxy:2375", container = "authentik-server" }
+secret_selector = { environment = "prod", secret_path = "/authentik", include_keys = ["AUTHENTIK_SECRET_KEY", "AUTHENTIK_POSTGRESQL__PASSWORD"] }
+output = { mode = "flat_files", directory = "/run/secrets/authentik_data", file_mode = 256 }

@@ -1,0 +1,7 @@
+[[services]]
+name = "papra"
+provider = "infisical_main"
+security_profile = "strict"
+lifecycle = { action = "restart_container", docker_proxy_url = "http://docker-socket-proxy:2375", container = "papra" }
+secret_selector = { environment = "prod", secret_path = "/papra", include_keys = ["AUTH_SECRET", "DOCUMENT_STORAGE_DOCUMENT_KEY_ENCRYPTION_KEYS"] }
+output = { mode = "templated_yaml", file_path = "/run/secrets/papra_data/papra.config.yaml", template = "authSecret: {{AUTH_SECRET}}\ndocument:\n  keyEncryptionKeys: {{DOCUMENT_STORAGE_DOCUMENT_KEY_ENCRYPTION_KEYS}}\n", file_mode = 256 }

@@ -30,12 +30,39 @@ Ratatoskr is data-driven:
 - `providers`: authentication and fetch backends.
 - `defaults`: safe baseline behavior (replay window, retries, timeout).
 - `storage`: idempotency backend (`sqlite` or `postgres`).
+- `includes`: optional split-file config globs for providers/profiles/services.
 - `services`: service-by-service policy:
   - selector (`environment`, `secret_path`, optional key filters)
   - render mode and destination
   - lifecycle action
   - security profile binding
 - `security_profiles`: optional named policy bundles for teams with mixed requirements.
+
+## Modular Config (Split Files)
+
+You can keep one main runtime config and load split files for providers, profiles, and services.
+
+- Convention folders (auto-loaded relative to main config):
+  - `config/providers/*.toml`
+  - `config/profiles/*.toml`
+  - `config/services/*.toml`
+- Explicit include globs (optional) under `[includes]`:
+  - `providers = ["..."]`
+  - `security_profiles = ["..."]`
+  - `services = ["..."]`
+
+Duplicate names are rejected at startup:
+
+- provider duplicate key: `provider.name`
+- service duplicate key: `service.name`
+- profile duplicate key: profile map key
+
+See split examples in:
+
+- `examples/ratatoskr.example.toml`
+- `examples/config/providers/`
+- `examples/config/profiles/`
+- `examples/config/services/`
 
 ### Security Profiles
 

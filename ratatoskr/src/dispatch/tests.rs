@@ -71,6 +71,7 @@ async fn deduplicates_duplicate_webhook_events() {
             sqlite_path: db_path.to_string_lossy().into_owned(),
             postgres_url: None,
         },
+        includes: crate::config::ConfigIncludes::default(),
         providers: vec![ProviderConfig {
             name: "infisical_main".to_string(),
             kind: ProviderKind::Infisical(InfisicalProviderConfig {

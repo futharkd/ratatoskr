@@ -1,0 +1,7 @@
+[[services]]
+name = "caddy"
+provider = "infisical_main"
+security_profile = "strict"
+lifecycle = { action = "reload_caddy", admin_url = "http://caddy:2019" }
+secret_selector = { environment = "prod", secret_path = "/caddy", include_keys = ["CLOUDFLARE_API_TOKEN"] }
+output = { mode = "flat_files", directory = "/run/secrets/caddy_data", file_mode = 256 }
