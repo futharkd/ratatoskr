@@ -37,4 +37,5 @@ agentic/
 *.wip.*
 
 # Local env files; never commit secrets
-ratatoskr/.env
+**/.env
+!**/.env.example

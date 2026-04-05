@@ -1,0 +1,64 @@
+# Example stack for ratatoskr (SQLite idempotency store, Infisical provider).
+#
+# Run from repo root:
+#   docker compose -f deploy/docker-compose.yml up --build
+# Or from this directory:
+#   docker compose up --build
+#
+# Security (operational): use `docker compose build --pull` (or `docker build --pull`) so base images pick
+# up publisher patches; scan the built image in CI (Trivy, Grype, Docker Scout). Values in `.env` are
+# visible via `docker inspect` and the container environment—prefer orchestrator secrets for production.
+# The app image is distroless (no curl/shell): health-check GET http://<host>:8080/healthz from your proxy
+# or monitoring, not from an in-container HEALTHCHECK.
+#
+# Note: `deploy.resources.limits` apply under Docker Swarm / some orchestrators; `mem_limit`/`cpus` help
+# on standalone `docker compose up` where `deploy` may be ignored.
+#
+# The app runs as UID 65532 (distroless `nonroot`); Docker named volumes default to root-owned, so a
+# one-shot init fixes ownership on `/var/lib/ratatoskr` before ratatoskr starts.
+
+services:
+  ratatoskr:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: ratatoskr:local
+    depends_on:
+      ratatoskr-data-init:
+        condition: service_completed_successfully
+    read_only: true
+    tmpfs:
+      - /tmp:rw,size=67108864
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    cpus: "1.0"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+    ports:
+      - "8080:8080"
+    environment:
+      RATATOSKR_CONFIG: /etc/ratatoskr/ratatoskr.toml
+      RUST_LOG: ${RUST_LOG:-info}
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./ratatoskr.toml:/etc/ratatoskr/ratatoskr.toml:ro
+      - ratatoskr-data:/var/lib/ratatoskr
+  
+  ratatoskr-data-init:
+    image: busybox:1.36.1-musl
+    user: root
+    volumes:
+      - ratatoskr-data:/data
+    command: ["chown", "-R", "65532:65532", "/data"]
+    restart: "no"
+
+volumes:
+  ratatoskr-data:

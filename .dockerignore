@@ -3,4 +3,9 @@ target/
 .github/
 .cursor/
 **/*.md
-gjallarhorn/
+
+# Keep secrets and local env files out of the build context
+.env
+**/.env
+*.env
+!**/.env.example
