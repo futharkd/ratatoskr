@@ -101,7 +101,9 @@ pub fn empty_app_config(sqlite_path: PathBuf) -> AppConfig {
 }
 
 /// Default Infisical provider block for webhook integration tests (mock or stub server).
-pub fn sample_infisical_provider_config(api_base_url: impl Into<String>) -> InfisicalProviderConfig {
+pub fn sample_infisical_provider_config(
+    api_base_url: impl Into<String>,
+) -> InfisicalProviderConfig {
     InfisicalProviderConfig {
         api_base_url: api_base_url.into(),
         client_id: "x".to_string(),
@@ -175,9 +177,8 @@ pub async fn engine_with_config_providers(cfg: AppConfig) -> anyhow::Result<Arc<
             .into_client(provider.name.clone(), &cfg.defaults)?;
         providers.insert(provider.name.clone(), client);
     }
-    let store: Arc<dyn IdempotencyStore> = Arc::new(
-        SqliteIdempotencyStore::new(&cfg.storage.sqlite_path).await?,
-    );
+    let store: Arc<dyn IdempotencyStore> =
+        Arc::new(SqliteIdempotencyStore::new(&cfg.storage.sqlite_path).await?);
     Ok(Arc::new(DispatchEngine::new(cfg, providers, store)))
 }
 

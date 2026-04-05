@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: cargo test
+        run: cargo test --workspace
+
+  live-tests:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      RATATOSKR_INFISICAL_API_BASE_URL: ${{ vars.RATATOSKR_INFISICAL_API_BASE_URL }}
+      RATATOSKR_INFISICAL_CLIENT_ID: ${{ secrets.RATATOSKR_INFISICAL_CLIENT_ID }}
+      RATATOSKR_INFISICAL_CLIENT_SECRET: ${{ secrets.RATATOSKR_INFISICAL_CLIENT_SECRET }}
+      RATATOSKR_INFISICAL_ENVIRONMENT: ${{ vars.RATATOSKR_INFISICAL_ENVIRONMENT }}
+      RATATOSKR_INFISICAL_SECRET_PATH: ${{ vars.RATATOSKR_INFISICAL_SECRET_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Live provider testing
+        run: cargo test -p ratatoskr --test providers -- --ignored --nocapture

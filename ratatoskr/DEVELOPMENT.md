@@ -46,4 +46,43 @@ cargo test -p ratatoskr --test providers -- --ignored --nocapture
 | `RATATOSKR_INFISICAL_EXPECT_KEY` | no | Secret key name that must appear in the response (default `AUTH_SECRET`) |
 | `RATATOSKR_INFISICAL_WEBHOOK_SECRET` | no | Overrides the webhook signing secret in test config (not used by the live fetch test) |
 
-Use environment variables or your shell’s secret mechanism only; do not commit credentials. A CI job can inject the same variables as protected secrets and run `cargo test -- --ignored` for continuous live checks if desired.
+Use environment variables or your shell’s secret mechanism only; do not commit credentials.
+
+## GitHub Actions
+
+The repository workflow [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on pushes and pull requests to `main`, and can be triggered manually with **workflow_dispatch**.
+
+### Default job (`lint-and-test`)
+
+Runs for every trigger: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, and `cargo test --workspace` (mimir + ratatoskr, including hermetic provider tests).
+
+### Live Testing job (`live-tests`)
+
+Runs after `lint-and-test` succeeds. It executes:
+
+`cargo test -p ratatoskr --test providers -- --ignored --nocapture`
+
+**Fork pull requests:** the `live-tests` job is skipped when the PR head branch lives in a fork (`github.event.pull_request.head.repo.full_name != github.repository`), so the workflow does not assume access to this repository’s Actions secrets or variables in that context. The main lint/test job still runs.
+
+**Same-repository branches:** the live job runs. Configure **Actions** settings (Settings → Secrets and variables → Actions):
+
+- **Repository variables** (non-sensitive config — visible to anyone who can read workflow runs/logs; do not put credentials here):
+
+| Variable | Required for live job |
+|----------|------------------------|
+| `RATATOSKR_INFISICAL_API_BASE_URL` | yes |
+| `RATATOSKR_INFISICAL_ENVIRONMENT` | yes |
+| `RATATOSKR_INFISICAL_SECRET_PATH` | yes |
+
+- **Repository secrets** (universal auth credentials only):
+
+| Secret | Required for live job |
+|--------|------------------------|
+| `RATATOSKR_INFISICAL_CLIENT_ID` | yes |
+| `RATATOSKR_INFISICAL_CLIENT_SECRET` | yes |
+
+The workflow maps these into the same environment variable names the live test reads (`vars.*` / `secrets.*` in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)).
+
+Optional test inputs (`RATATOSKR_INFISICAL_EXPECT_KEY`, `RATATOSKR_INFISICAL_WEBHOOK_SECRET`) are not set in CI by default; add them to the workflow `env` block from `vars.*` if you need them, or rely on the test’s defaults.
+
+If required values are missing on a same-repo run, the ignored test fails when reading environment variables—add the variables and secrets above to make the job pass.
