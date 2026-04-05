@@ -22,6 +22,6 @@ sqlite_path = "./ratatoskr.db"
 #    examples/config/profiles/*.toml
 #    examples/config/services/*.toml
 # 2) explicit globs can be added per section:
-providers = ["examples/config/providers/*.toml"]
-security_profiles = ["examples/config/profiles/*.toml"]
-services = ["examples/config/services/*.toml"]
+providers = ["config/providers/*.toml"]
+security_profiles = ["config/profiles/*.toml"]
+services = ["config/services/*.toml"]

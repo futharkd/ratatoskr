@@ -16,7 +16,8 @@ use tempfile::tempdir;
 use crate::{
     config::{
         AppConfig, DefaultsConfig, InfisicalProviderConfig, LifecycleAction, OutputConfig,
-        ProviderConfig, ProviderKind, SecretSelector, ServerConfig, ServiceConfig, StorageConfig,
+        PlaceholderPolicyOverride, ProviderConfig, ProviderKind, SecretSelector,
+        SecurityProfileConfig, ServerConfig, ServiceConfig, StorageConfig,
     },
     providers::{ProviderClient, SecretFetchRequest, SecretMap},
     storage::{IdempotencyStore, sqlite::SqliteIdempotencyStore},
@@ -97,6 +98,7 @@ async fn deduplicates_duplicate_webhook_events() {
             },
             lifecycle: LifecycleAction::NoAction,
             security_profile: "strict".to_string(),
+            placeholder_policy_override: None,
         }],
         security_profiles: Default::default(),
     };
@@ -154,4 +156,191 @@ fn signed_headers(secret: &str, body: &Bytes) -> HeaderMap {
         HeaderValue::from_static("delivery-1"),
     );
     headers
+}
+
+#[tokio::test]
+async fn applies_profile_placeholder_policy() {
+    let temp = tempdir().unwrap();
+    let db_path = temp.path().join("idempotency-profile.db");
+    let out_file = temp.path().join("output.yaml");
+    let mut security_profiles = std::collections::HashMap::new();
+    security_profiles.insert(
+        "profile_with_env".to_string(),
+        SecurityProfileConfig {
+            allow_env_vars: false,
+            require_signature: true,
+            replay_tolerance_seconds: Some(300),
+            allow_env_placeholders: true,
+            allow_file_placeholders: false,
+        },
+    );
+
+    let cfg = AppConfig {
+        server: ServerConfig {
+            listen_addr: "127.0.0.1:0".to_string(),
+        },
+        defaults: DefaultsConfig {
+            replay_tolerance_seconds: 300,
+            http_timeout_seconds: 10,
+            max_retries: 3,
+            retry_backoff_millis: 300,
+        },
+        storage: StorageConfig {
+            backend: crate::config::StorageBackend::Sqlite,
+            sqlite_path: db_path.to_string_lossy().into_owned(),
+            postgres_url: None,
+        },
+        includes: crate::config::ConfigIncludes::default(),
+        providers: vec![ProviderConfig {
+            name: "infisical_main".to_string(),
+            kind: ProviderKind::Infisical(InfisicalProviderConfig {
+                api_base_url: "https://app.infisical.com".to_string(),
+                client_id_env: "X".to_string(),
+                client_secret_env: "Y".to_string(),
+                webhook_secret_env: "TEST_WEBHOOK_SECRET".to_string(),
+                login_path: "/api/v1/auth/universal-auth/login".to_string(),
+                secrets_path: "/api/v3/secrets/raw".to_string(),
+            }),
+        }],
+        services: vec![ServiceConfig {
+            name: "profile-policy".to_string(),
+            provider: "infisical_main".to_string(),
+            secret_selector: SecretSelector {
+                environment: "prod".to_string(),
+                secret_path: "/papra".to_string(),
+                include_keys: Vec::new(),
+            },
+            output: OutputConfig::TemplatedYaml {
+                file_path: out_file.to_string_lossy().into_owned(),
+                template: "value: {$RATATOSKR_POLICY_ENV}\n".to_string(),
+                file_mode: None,
+            },
+            lifecycle: LifecycleAction::NoAction,
+            security_profile: "profile_with_env".to_string(),
+            placeholder_policy_override: None,
+        }],
+        security_profiles,
+    };
+
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("TEST_WEBHOOK_SECRET", "top-secret") };
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("RATATOSKR_POLICY_ENV", "from-profile") };
+    let provider = Arc::new(MockProvider {
+        calls: Arc::new(AtomicUsize::new(0)),
+    });
+    let mut providers = HashMap::<String, Arc<dyn ProviderClient>>::new();
+    providers.insert("infisical_main".to_string(), provider);
+    let store: Arc<dyn IdempotencyStore> = Arc::new(
+        SqliteIdempotencyStore::new(&cfg.storage.sqlite_path)
+            .await
+            .unwrap(),
+    );
+    let engine = DispatchEngine::new(cfg, providers, store);
+
+    let body =
+        Bytes::from(r#"{"event":"secrets.modified","environment":"prod","secretPath":"/papra"}"#);
+    let headers = signed_headers("top-secret", &body);
+    engine
+        .process_webhook("infisical_main", &headers, &body)
+        .await
+        .unwrap();
+
+    let rendered = std::fs::read_to_string(out_file).unwrap();
+    assert!(rendered.contains("from-profile"));
+}
+
+#[tokio::test]
+async fn service_override_takes_precedence_over_profile() {
+    let temp = tempdir().unwrap();
+    let db_path = temp.path().join("idempotency-override.db");
+    let out_file = temp.path().join("output.yaml");
+    let mut security_profiles = std::collections::HashMap::new();
+    security_profiles.insert(
+        "strict".to_string(),
+        SecurityProfileConfig {
+            allow_env_vars: false,
+            require_signature: true,
+            replay_tolerance_seconds: Some(300),
+            allow_env_placeholders: false,
+            allow_file_placeholders: false,
+        },
+    );
+
+    let cfg = AppConfig {
+        server: ServerConfig {
+            listen_addr: "127.0.0.1:0".to_string(),
+        },
+        defaults: DefaultsConfig {
+            replay_tolerance_seconds: 300,
+            http_timeout_seconds: 10,
+            max_retries: 3,
+            retry_backoff_millis: 300,
+        },
+        storage: StorageConfig {
+            backend: crate::config::StorageBackend::Sqlite,
+            sqlite_path: db_path.to_string_lossy().into_owned(),
+            postgres_url: None,
+        },
+        includes: crate::config::ConfigIncludes::default(),
+        providers: vec![ProviderConfig {
+            name: "infisical_main".to_string(),
+            kind: ProviderKind::Infisical(InfisicalProviderConfig {
+                api_base_url: "https://app.infisical.com".to_string(),
+                client_id_env: "X".to_string(),
+                client_secret_env: "Y".to_string(),
+                webhook_secret_env: "TEST_WEBHOOK_SECRET".to_string(),
+                login_path: "/api/v1/auth/universal-auth/login".to_string(),
+                secrets_path: "/api/v3/secrets/raw".to_string(),
+            }),
+        }],
+        services: vec![ServiceConfig {
+            name: "override-policy".to_string(),
+            provider: "infisical_main".to_string(),
+            secret_selector: SecretSelector {
+                environment: "prod".to_string(),
+                secret_path: "/papra".to_string(),
+                include_keys: Vec::new(),
+            },
+            output: OutputConfig::TemplatedYaml {
+                file_path: out_file.to_string_lossy().into_owned(),
+                template: "value: {$RATATOSKR_OVERRIDE_ENV}\n".to_string(),
+                file_mode: None,
+            },
+            lifecycle: LifecycleAction::NoAction,
+            security_profile: "strict".to_string(),
+            placeholder_policy_override: Some(PlaceholderPolicyOverride {
+                allow_env_placeholders: Some(true),
+                allow_file_placeholders: None,
+            }),
+        }],
+        security_profiles,
+    };
+
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("TEST_WEBHOOK_SECRET", "top-secret") };
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("RATATOSKR_OVERRIDE_ENV", "from-override") };
+    let provider = Arc::new(MockProvider {
+        calls: Arc::new(AtomicUsize::new(0)),
+    });
+    let mut providers = HashMap::<String, Arc<dyn ProviderClient>>::new();
+    providers.insert("infisical_main".to_string(), provider);
+    let store: Arc<dyn IdempotencyStore> = Arc::new(
+        SqliteIdempotencyStore::new(&cfg.storage.sqlite_path)
+            .await
+            .unwrap(),
+    );
+    let engine = DispatchEngine::new(cfg, providers, store);
+
+    let body =
+        Bytes::from(r#"{"event":"secrets.modified","environment":"prod","secretPath":"/papra"}"#);
+    let headers = signed_headers("top-secret", &body);
+    engine
+        .process_webhook("infisical_main", &headers, &body)
+        .await
+        .unwrap();
+
+    let rendered = std::fs::read_to_string(out_file).unwrap();
+    assert!(rendered.contains("from-override"));
 }

@@ -5,10 +5,10 @@ use bytes::Bytes;
 use http::HeaderMap;
 
 use crate::{
-    config::{AppConfig, ProviderConfig, ProviderKind},
+    config::{AppConfig, PlaceholderPolicyOverride, ProviderConfig, ProviderKind, ServiceConfig},
     orchestration::LifecycleExecutor,
     providers::{ProviderClient, SecretFetchRequest},
-    render::render_and_write,
+    render::{PlaceholderPolicy, render_and_write},
     storage::IdempotencyStore,
     verify::verify_infisical_signature,
 };
@@ -81,7 +81,8 @@ impl DispatchEngine {
                 .fetch_secrets(request)
                 .await
                 .with_context(|| format!("failed fetching secrets for service {}", service.name))?;
-            render_and_write(&service.output, &secrets)
+            let placeholder_policy = self.effective_placeholder_policy(service);
+            render_and_write(&service.output, &secrets, placeholder_policy)
                 .with_context(|| format!("failed rendering output for service {}", service.name))?;
             self.lifecycle
                 .execute(&service.lifecycle)
@@ -124,5 +125,32 @@ impl DispatchEngine {
             }
         }
         Ok(())
+    }
+
+    fn effective_placeholder_policy(&self, service: &ServiceConfig) -> PlaceholderPolicy {
+        let profile = self.config.security_profiles.get(&service.security_profile);
+        let base = PlaceholderPolicy {
+            allow_env_placeholders: profile.map(|p| p.allow_env_placeholders).unwrap_or(false),
+            allow_file_placeholders: profile.map(|p| p.allow_file_placeholders).unwrap_or(false),
+        };
+        apply_placeholder_override(base, service.placeholder_policy_override.as_ref())
+    }
+}
+
+fn apply_placeholder_override(
+    base: PlaceholderPolicy,
+    override_cfg: Option<&PlaceholderPolicyOverride>,
+) -> PlaceholderPolicy {
+    if let Some(override_cfg) = override_cfg {
+        PlaceholderPolicy {
+            allow_env_placeholders: override_cfg
+                .allow_env_placeholders
+                .unwrap_or(base.allow_env_placeholders),
+            allow_file_placeholders: override_cfg
+                .allow_file_placeholders
+                .unwrap_or(base.allow_file_placeholders),
+        }
+    } else {
+        base
     }
 }

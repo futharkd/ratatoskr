@@ -64,6 +64,23 @@ See split examples in:
 - `examples/config/profiles/`
 - `examples/config/services/`
 
+## Placeholder Injection
+
+Ratatoskr supports Caddy-style placeholders in all render outputs (`flat_files` and `templated_yaml`):
+
+- `{$ENV_VAR}` to inject environment variable values
+- `{file:/absolute/path/to/secret}` to inject file contents
+
+Security defaults are deny-by-default:
+
+- `allow_env_placeholders = false`
+- `allow_file_placeholders = false`
+
+Enable per profile in `security_profiles` and optionally override per service using:
+
+- `placeholder_policy_override.allow_env_placeholders`
+- `placeholder_policy_override.allow_file_placeholders`
+
 ### Security Profiles
 
 - `strict`: file-based delivery, signature required, replay checks enabled.

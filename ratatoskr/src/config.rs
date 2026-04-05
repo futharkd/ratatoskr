@@ -163,6 +163,8 @@ pub struct ServiceConfig {
     pub lifecycle: LifecycleAction,
     #[serde(default)]
     pub security_profile: String,
+    #[serde(default)]
+    pub placeholder_policy_override: Option<PlaceholderPolicyOverride>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -216,6 +218,18 @@ pub struct SecurityProfileConfig {
     pub require_signature: bool,
     #[serde(default)]
     pub replay_tolerance_seconds: Option<i64>,
+    #[serde(default)]
+    pub allow_env_placeholders: bool,
+    #[serde(default)]
+    pub allow_file_placeholders: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct PlaceholderPolicyOverride {
+    #[serde(default)]
+    pub allow_env_placeholders: Option<bool>,
+    #[serde(default)]
+    pub allow_file_placeholders: Option<bool>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -361,7 +375,7 @@ fn parse_fragment<T: for<'de> Deserialize<'de>>(path: &Path) -> anyhow::Result<T
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::{fs, path::PathBuf};
 
     use tempfile::tempdir;
 
@@ -558,5 +572,16 @@ sqlite_path = "./ratatoskr.db"
 
         let err = AppConfig::load(&main_cfg).unwrap_err();
         assert!(err.to_string().contains("duplicate service name"));
+    }
+
+    #[test]
+    fn loads_repository_example_config() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let example = root.join("examples/ratatoskr.example.toml");
+        let cfg = AppConfig::load(&example).unwrap();
+        assert_eq!(cfg.providers.len(), 1);
+        assert_eq!(cfg.services.len(), 3);
+        assert!(cfg.security_profiles.contains_key("strict"));
+        assert!(cfg.security_profiles.contains_key("env_only_allowed"));
     }
 }
