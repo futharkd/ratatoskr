@@ -32,11 +32,7 @@ pub async fn handle(
         Err(err) => {
             let message = format!("{err:#}");
             error!(provider = provider, error = %message, "webhook processing failed");
-            (
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "error": message })),
-            )
-                .into_response()
+            (StatusCode::BAD_REQUEST, Json(json!({ "error": message }))).into_response()
         }
     }
 }
