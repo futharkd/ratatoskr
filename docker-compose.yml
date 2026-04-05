@@ -1,0 +1,57 @@
+services:
+  ratatoskr:
+    build: .
+    image: ratatoskr:local
+    ports:
+      - "8080:8080"
+    environment:
+      RATATOSKR_CONFIG: /etc/ratatoskr/ratatoskr.toml
+      # Required for the bundled Infisical provider (see deploy/ratatoskr.toml):
+      # INFISICAL_PROJECT_ID:
+      # INFISICAL_CLIENT_ID:
+      # INFISICAL_CLIENT_SECRET:
+      # INFISICAL_WEBHOOK_SECRET:
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./deploy/ratatoskr.toml:/etc/ratatoskr/ratatoskr.toml:ro
+      - ratatoskr-data:/var/lib/ratatoskr
+
+volumes:
+  ratatoskr-data:
+
+# Optional: Postgres-backed idempotency (uncomment and align [storage] in ratatoskr.toml).
+#
+# services:
+#   postgres:
+#     image: postgres:16-alpine
+#     environment:
+#       POSTGRES_USER: ratatoskr
+#       POSTGRES_PASSWORD: ratatoskr
+#       POSTGRES_DB: ratatoskr
+#     volumes:
+#       - postgres-data:/var/lib/postgresql/data
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U ratatoskr -d ratatoskr"]
+#       interval: 5s
+#       timeout: 3s
+#       retries: 5
+#
+#   ratatoskr:
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#     environment:
+#       DATABASE_URL: postgres://ratatoskr:ratatoskr@postgres:5432/ratatoskr
+#
+# In ratatoskr.toml:
+#   [storage]
+#   backend = "postgres"
+#   postgres_url = "postgres://ratatoskr:ratatoskr@postgres:5432/ratatoskr"
+#
+# volumes:
+#   postgres-data:
+
+# After CI publishes to GHCR, you can run a prebuilt image instead of build:
+#   image: ghcr.io/<owner>/yggdrasil:latest

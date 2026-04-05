@@ -1,0 +1,28 @@
+# Compose-oriented defaults: bind 0.0.0.0 and persist SQLite on the data volume.
+# Set INFISICAL_* (and optional RUST_LOG) via environment or an env file.
+
+[server]
+listen_addr = "0.0.0.0:8080"
+
+[defaults]
+replay_tolerance_seconds = 300
+http_timeout_seconds = 10
+max_retries = 3
+retry_backoff_millis = 300
+
+[storage]
+backend = "sqlite"
+sqlite_path = "/var/lib/ratatoskr/ratatoskr.db"
+
+[mimir.placeholders]
+env = false
+file = false
+
+[[providers]]
+name = "infisical_main"
+type = "infisical"
+api_base_url = "https://app.infisical.com"
+project_id = "{env:INFISICAL_PROJECT_ID}"
+client_id = "{env:INFISICAL_CLIENT_ID}"
+client_secret = "{env:INFISICAL_CLIENT_SECRET}"
+webhook_secret = "{env:INFISICAL_WEBHOOK_SECRET}"
