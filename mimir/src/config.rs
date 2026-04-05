@@ -582,8 +582,11 @@ sqlite_path = "./ratatoskr.db"
 
     #[test]
     fn loads_repository_example_config() {
-        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let example = root.join("examples/ratatoskr.example.toml");
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("mimir crate should be inside workspace root")
+            .to_path_buf();
+        let example = root.join("ratatoskr/examples/ratatoskr.example.toml");
         let cfg = AppConfig::load(&example).unwrap();
         assert_eq!(cfg.providers.len(), 1);
         assert_eq!(cfg.services.len(), 3);

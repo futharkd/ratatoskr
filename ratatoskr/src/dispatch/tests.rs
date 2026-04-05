@@ -10,15 +10,16 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use hmac::{Hmac, KeyInit, Mac};
 use http::{HeaderMap, header::HeaderValue};
+use mimir::config::{
+    AppConfig, ConfigIncludes, DefaultsConfig, InfisicalProviderConfig, LifecycleAction,
+    OutputConfig, PlaceholderPolicyOverride, ProfilePlaceholderPolicy, ProviderConfig,
+    ProviderKind, SecretSelector, SecurityProfileConfig, ServerConfig, ServiceConfig,
+    StorageBackend, StorageConfig,
+};
 use sha2::Sha256;
 use tempfile::tempdir;
 
 use crate::{
-    config::{
-        AppConfig, DefaultsConfig, InfisicalProviderConfig, LifecycleAction, OutputConfig,
-        PlaceholderPolicyOverride, ProviderConfig, ProviderKind, SecretSelector,
-        SecurityProfileConfig, ServerConfig, ServiceConfig, StorageConfig,
-    },
     providers::{ProviderClient, SecretFetchRequest, SecretMap},
     storage::{IdempotencyStore, sqlite::SqliteIdempotencyStore},
 };
@@ -68,11 +69,11 @@ async fn deduplicates_duplicate_webhook_events() {
             retry_backoff_millis: 300,
         },
         storage: StorageConfig {
-            backend: crate::config::StorageBackend::Sqlite,
+            backend: StorageBackend::Sqlite,
             sqlite_path: db_path.to_string_lossy().into_owned(),
             postgres_url: None,
         },
-        includes: crate::config::ConfigIncludes::default(),
+        includes: ConfigIncludes::default(),
         providers: vec![ProviderConfig {
             name: "infisical_main".to_string(),
             kind: ProviderKind::Infisical(InfisicalProviderConfig {
@@ -168,7 +169,7 @@ async fn applies_profile_placeholder_policy() {
             allow_env_vars: false,
             require_signature: true,
             replay_tolerance_seconds: Some(300),
-            placeholders: crate::config::ProfilePlaceholderPolicy {
+            placeholders: ProfilePlaceholderPolicy {
                 env: true,
                 file: false,
             },
@@ -186,11 +187,11 @@ async fn applies_profile_placeholder_policy() {
             retry_backoff_millis: 300,
         },
         storage: StorageConfig {
-            backend: crate::config::StorageBackend::Sqlite,
+            backend: StorageBackend::Sqlite,
             sqlite_path: db_path.to_string_lossy().into_owned(),
             postgres_url: None,
         },
-        includes: crate::config::ConfigIncludes::default(),
+        includes: ConfigIncludes::default(),
         providers: vec![ProviderConfig {
             name: "infisical_main".to_string(),
             kind: ProviderKind::Infisical(InfisicalProviderConfig {
@@ -260,7 +261,7 @@ async fn service_override_takes_precedence_over_profile() {
             allow_env_vars: false,
             require_signature: true,
             replay_tolerance_seconds: Some(300),
-            placeholders: crate::config::ProfilePlaceholderPolicy {
+            placeholders: ProfilePlaceholderPolicy {
                 env: false,
                 file: false,
             },
@@ -278,11 +279,11 @@ async fn service_override_takes_precedence_over_profile() {
             retry_backoff_millis: 300,
         },
         storage: StorageConfig {
-            backend: crate::config::StorageBackend::Sqlite,
+            backend: StorageBackend::Sqlite,
             sqlite_path: db_path.to_string_lossy().into_owned(),
             postgres_url: None,
         },
-        includes: crate::config::ConfigIncludes::default(),
+        includes: ConfigIncludes::default(),
         providers: vec![ProviderConfig {
             name: "infisical_main".to_string(),
             kind: ProviderKind::Infisical(InfisicalProviderConfig {

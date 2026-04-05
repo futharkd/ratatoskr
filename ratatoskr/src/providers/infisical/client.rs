@@ -7,10 +7,10 @@ use serde_json::Value;
 use tokio::time::sleep;
 
 use crate::{
-    config::{InfisicalProviderConfig, SecretSelector},
     placeholders::{PlaceholderPolicy, resolve_placeholders},
     providers::{ProviderClient, SecretFetchRequest, SecretMap},
 };
+use mimir::config::{InfisicalProviderConfig, SecretSelector};
 
 use super::models::{LoginResponse, parse_secret_items};
 

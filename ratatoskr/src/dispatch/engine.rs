@@ -3,9 +3,11 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::{Context, anyhow};
 use bytes::Bytes;
 use http::HeaderMap;
+use mimir::config::{
+    AppConfig, PlaceholderPolicyOverride, ProviderConfig, ProviderKind, ServiceConfig,
+};
 
 use crate::{
-    config::{AppConfig, PlaceholderPolicyOverride, ProviderConfig, ProviderKind, ServiceConfig},
     orchestration::LifecycleExecutor,
     providers::{ProviderClient, SecretFetchRequest},
     render::{PlaceholderPolicy, render_and_write},

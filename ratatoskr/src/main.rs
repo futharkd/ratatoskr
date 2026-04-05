@@ -1,4 +1,3 @@
-mod config;
 mod dispatch;
 mod http;
 mod orchestration;
@@ -12,8 +11,8 @@ use std::{collections::HashMap, env, net::SocketAddr, sync::Arc};
 
 use anyhow::Context;
 use axum::{Router, routing::get};
-use config::AppConfig;
 use dispatch::DispatchEngine;
+use mimir::config::AppConfig;
 use providers::{ProviderClient, infisical::InfisicalProvider};
 use storage::build_idempotency_store;
 use tokio::net::TcpListener;
@@ -66,7 +65,7 @@ fn init_tracing() {
 fn build_provider_map(config: &AppConfig) -> HashMap<String, Arc<dyn ProviderClient>> {
     let mut map: HashMap<String, Arc<dyn ProviderClient>> = HashMap::new();
     for provider in &config.providers {
-        let config::ProviderKind::Infisical(infisical) = &provider.kind;
+        let mimir::config::ProviderKind::Infisical(infisical) = &provider.kind;
         let client = InfisicalProvider::new(
             provider.name.clone(),
             infisical.clone(),

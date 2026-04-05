@@ -1,4 +1,4 @@
-use crate::config::ServiceConfig;
+use mimir::config::ServiceConfig;
 
 use super::types::WebhookPayload;
 

@@ -2,6 +2,8 @@
 
 Ratatoskr is a configurable Rust webhook worker for secret delivery and lifecycle orchestration in lightweight Docker Compose deployments.
 
+Configuration parsing and schema types are provided by the shared `mimir` crate in this repository.
+
 ## What It Does
 
 - Accepts signed webhooks from providers (Infisical first).

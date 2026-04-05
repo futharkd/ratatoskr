@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use async_trait::async_trait;
 
-use crate::config::SecretSelector;
+use mimir::config::SecretSelector;
 
 #[derive(Debug, Clone)]
 pub struct SecretFetchRequest {
