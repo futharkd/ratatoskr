@@ -70,7 +70,7 @@ See split examples in:
 
 Ratatoskr supports Caddy-style placeholders in all render outputs (`flat_files` and `templated_yaml`):
 
-- `{$ENV_VAR}` to inject environment variable values
+- `{env:ENV_VAR}` to inject environment variable values
 - `{file:/absolute/path/to/secret}` to inject file contents
 
 Security defaults are deny-by-default:

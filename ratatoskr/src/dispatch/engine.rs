@@ -3,14 +3,13 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::{Context, anyhow};
 use bytes::Bytes;
 use http::HeaderMap;
-use mimir::config::{
-    AppConfig, PlaceholderPolicyOverride, ProviderConfig, ProviderKind, ServiceConfig,
-};
+use mimir::config::{AppConfig, ProviderConfig, ProviderKind};
+use mimir::placeholders::effective_placeholder_policy;
 
 use crate::{
     orchestration::LifecycleExecutor,
     providers::{ProviderClient, SecretFetchRequest},
-    render::{PlaceholderPolicy, render_and_write},
+    render::render_and_write,
     storage::IdempotencyStore,
     verify::verify_infisical_signature,
 };
@@ -83,7 +82,8 @@ impl DispatchEngine {
                 .fetch_secrets(request)
                 .await
                 .with_context(|| format!("failed fetching secrets for service {}", service.name))?;
-            let placeholder_policy = self.effective_placeholder_policy(service);
+            let profile = self.config.security_profiles.get(&service.security_profile);
+            let placeholder_policy = effective_placeholder_policy(profile, service);
             render_and_write(&service.output, &secrets, placeholder_policy)
                 .with_context(|| format!("failed rendering output for service {}", service.name))?;
             self.lifecycle
@@ -128,28 +128,5 @@ impl DispatchEngine {
             }
         }
         Ok(())
-    }
-
-    fn effective_placeholder_policy(&self, service: &ServiceConfig) -> PlaceholderPolicy {
-        let profile = self.config.security_profiles.get(&service.security_profile);
-        let base = PlaceholderPolicy {
-            allow_env_placeholders: profile.map(|p| p.placeholders.env).unwrap_or(false),
-            allow_file_placeholders: profile.map(|p| p.placeholders.file).unwrap_or(false),
-        };
-        apply_placeholder_override(base, service.placeholder_policy_override.as_ref())
-    }
-}
-
-fn apply_placeholder_override(
-    base: PlaceholderPolicy,
-    override_cfg: Option<&PlaceholderPolicyOverride>,
-) -> PlaceholderPolicy {
-    if let Some(override_cfg) = override_cfg {
-        PlaceholderPolicy {
-            allow_env_placeholders: override_cfg.env.unwrap_or(base.allow_env_placeholders),
-            allow_file_placeholders: override_cfg.file.unwrap_or(base.allow_file_placeholders),
-        }
-    } else {
-        base
     }
 }

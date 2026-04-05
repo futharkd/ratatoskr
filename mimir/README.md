@@ -9,6 +9,8 @@
 - Split-file includes (convention folders + explicit globs)
 - Merge and duplicate validation rules
 - Default value application
+- Shared placeholder parsing/resolution (`{env:VAR}`, `{file:/abs/path}`)
+- Placeholder policy evaluation (profile + service override merge)
 
 ## Consumer
 

@@ -6,11 +6,9 @@ use reqwest::Client;
 use serde_json::Value;
 use tokio::time::sleep;
 
-use crate::{
-    placeholders::{PlaceholderPolicy, resolve_placeholders},
-    providers::{ProviderClient, SecretFetchRequest, SecretMap},
-};
+use crate::providers::{ProviderClient, SecretFetchRequest, SecretMap};
 use mimir::config::{InfisicalProviderConfig, SecretSelector};
+use mimir::placeholders::{PlaceholderPolicy, resolve_placeholders};
 
 use super::models::{LoginResponse, parse_secret_items};
 

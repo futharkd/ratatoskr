@@ -35,7 +35,7 @@ fn resolves_placeholders_when_policy_allows() {
     unsafe { std::env::set_var("RATATOSKR_RENDER_ENV", "from-env") };
     let output = OutputConfig::TemplatedYaml {
         file_path: temp.path().join("out.yaml").to_string_lossy().into_owned(),
-        template: "env: {$RATATOSKR_RENDER_ENV}\nfile: {file:/tmp/placeholder}\n".to_string(),
+        template: "env: {env:RATATOSKR_RENDER_ENV}\nfile: {file:/tmp/placeholder}\n".to_string(),
         file_mode: None,
     };
     let fixed_output = if let OutputConfig::TemplatedYaml {

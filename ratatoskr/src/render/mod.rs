@@ -4,8 +4,8 @@ mod templated_yaml;
 
 use std::collections::BTreeMap;
 
-pub use crate::placeholders::PlaceholderPolicy;
 use mimir::config::OutputConfig;
+pub use mimir::placeholders::PlaceholderPolicy;
 
 pub fn render_and_write(
     output: &OutputConfig,

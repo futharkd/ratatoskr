@@ -1,7 +1,6 @@
 mod dispatch;
 mod http;
 mod orchestration;
-mod placeholders;
 mod providers;
 mod render;
 mod storage;

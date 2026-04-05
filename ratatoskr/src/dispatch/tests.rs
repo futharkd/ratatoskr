@@ -213,7 +213,7 @@ async fn applies_profile_placeholder_policy() {
             },
             output: OutputConfig::TemplatedYaml {
                 file_path: out_file.to_string_lossy().into_owned(),
-                template: "value: {$RATATOSKR_POLICY_ENV}\n".to_string(),
+                template: "value: {env:RATATOSKR_POLICY_ENV}\n".to_string(),
                 file_mode: None,
             },
             lifecycle: LifecycleAction::NoAction,
@@ -305,7 +305,7 @@ async fn service_override_takes_precedence_over_profile() {
             },
             output: OutputConfig::TemplatedYaml {
                 file_path: out_file.to_string_lossy().into_owned(),
-                template: "value: {$RATATOSKR_OVERRIDE_ENV}\n".to_string(),
+                template: "value: {env:RATATOSKR_OVERRIDE_ENV}\n".to_string(),
                 file_mode: None,
             },
             lifecycle: LifecycleAction::NoAction,
