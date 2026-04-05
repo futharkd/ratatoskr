@@ -4,14 +4,19 @@
 
 ## Scope
 
-- Canonical config schema types (`AppConfig` and related structs)
-- Main config loading from TOML
-- Split-file includes (convention folders + explicit globs)
-- Merge and duplicate validation rules
-- Default value application
+- Standalone `mimir` section primitives (`MimirConfig`)
 - Shared placeholder parsing/resolution (`{env:VAR}`, `{file:/abs/path}`)
-- Placeholder policy evaluation (profile + service override merge)
+- Policy merge helper via `PlaceholderOverride`
+- Consumer default merging helper (`MimirConfig::with_fallbacks`)
+- Generic TOML loader utility (`load_toml_file`)
 
-## Consumer
+`mimir` does not define application schemas like providers/services/jobs.
+Each consumer crate owns its schema and can embed:
 
-`ratatoskr` imports `mimir::config` for all config types and loading behavior.
+```toml
+[mimir.placeholders]
+env = true
+file = false
+```
+
+Then the consumer decides its own defaults and override hierarchy.

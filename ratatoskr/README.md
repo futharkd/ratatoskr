@@ -2,7 +2,7 @@
 
 Ratatoskr is a configurable Rust webhook worker for secret delivery and lifecycle orchestration in lightweight Docker Compose deployments.
 
-Configuration parsing and schema types are provided by the shared `mimir` crate in this repository.
+Ratatoskr owns its application schema, and uses the shared `mimir` crate for reusable config primitives (for example the `[mimir]` section and placeholder resolution/policy merging).
 
 ## What It Does
 
@@ -32,7 +32,8 @@ Ratatoskr is data-driven:
 - `providers`: authentication and fetch backends.
 - `defaults`: safe baseline behavior (replay window, retries, timeout).
 - `storage`: idempotency backend (`sqlite` or `postgres`).
-- `includes`: optional split-file config globs for providers/profiles/services.
+- `includes`: optional explicit glob lists for merging split provider/profile/service TOML fragments.
+- `mimir`: shared library settings (for example placeholder defaults).
 - `services`: service-by-service policy:
   - selector (`environment`, `secret_path`, optional key filters)
   - render mode and destination
@@ -42,16 +43,21 @@ Ratatoskr is data-driven:
 
 ## Modular Config (Split Files)
 
-You can keep one main runtime config and load split files for providers, profiles, and services.
+You can keep one main runtime config and merge additional TOML fragments using `[includes]`.
 
-- Convention folders (auto-loaded relative to main config):
-  - `config/providers/*.toml`
-  - `config/profiles/*.toml`
-  - `config/services/*.toml`
-- Explicit include globs (optional) under `[includes]`:
-  - `providers = ["..."]`
-  - `security_profiles = ["..."]`
-  - `services = ["..."]`
+- **Only** the glob patterns you list are loaded (paths are relative to the main config file’s directory unless absolute).
+- For each of `providers`, `security_profiles`, and `services`: omit the key or use an empty array to load **nothing** extra for that category (main file only).
+
+Example:
+
+```toml
+[includes]
+providers = ["config/providers/*.toml"]
+security_profiles = ["config/profiles/*.toml"]
+services = ["config/services/*.toml"]
+```
+
+**Breaking change:** earlier versions also merged implicit `config/providers/*.toml` (and sibling profile/service paths) even when not listed. You must list every glob you want merged.
 
 Duplicate names are rejected at startup:
 
@@ -75,6 +81,9 @@ Ratatoskr supports Caddy-style placeholders in all render outputs (`flat_files` 
 
 Security defaults are deny-by-default:
 
+- `[mimir.placeholders]` (global baseline for this worker config)
+  - `env = false`
+  - `file = false`
 - `[security_profiles.<name>.placeholders]`
   - `env = false`
   - `file = false`

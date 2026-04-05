@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, time::Duration};
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 use anyhow::{Context, anyhow};
 use async_trait::async_trait;
@@ -6,8 +6,10 @@ use reqwest::Client;
 use serde_json::Value;
 use tokio::time::sleep;
 
-use crate::providers::{ProviderClient, SecretFetchRequest, SecretMap};
-use mimir::config::{InfisicalProviderConfig, SecretSelector};
+use crate::config::{DefaultsConfig, SecretSelector};
+use crate::providers::{BuildProviderFromConfig, ProviderClient, SecretFetchRequest, SecretMap};
+
+use super::InfisicalProviderConfig;
 use mimir::placeholders::{PlaceholderPolicy, resolve_placeholders};
 
 use super::models::{LoginResponse, parse_secret_items};
@@ -155,5 +157,21 @@ impl ProviderClient for InfisicalProvider {
 
     fn webhook_secret(&self) -> anyhow::Result<String> {
         self.resolve_provider_secret(&self.config.webhook_secret)
+    }
+}
+
+impl BuildProviderFromConfig for InfisicalProviderConfig {
+    fn into_provider_client(
+        self,
+        name: String,
+        defaults: &DefaultsConfig,
+    ) -> anyhow::Result<Arc<dyn ProviderClient>> {
+        Ok(Arc::new(InfisicalProvider::new(
+            name,
+            self,
+            defaults.max_retries,
+            defaults.retry_backoff_millis,
+            defaults.http_timeout_seconds,
+        )))
     }
 }

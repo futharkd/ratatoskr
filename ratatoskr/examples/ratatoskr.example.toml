@@ -11,17 +11,17 @@ retry_backoff_millis = 300
 backend = "sqlite"
 sqlite_path = "./ratatoskr.db"
 
+[mimir.placeholders]
+env = false
+file = false
+
 # PostgreSQL alternative:
 # backend = "postgres"
 # postgres_url = "postgres://ratatoskr:ratatoskr@postgres:5432/ratatoskr"
 
 [includes]
-# Hybrid loading:
-# 1) convention folders are auto-loaded:
-#    examples/config/providers/*.toml
-#    examples/config/profiles/*.toml
-#    examples/config/services/*.toml
-# 2) explicit globs can be added per section:
+# Only these globs are loaded (relative to this file’s directory unless absolute).
+# Omit a key or use an empty list to skip that category entirely.
 providers = ["config/providers/*.toml"]
 security_profiles = ["config/profiles/*.toml"]
 services = ["config/services/*.toml"]

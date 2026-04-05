@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use mimir::config::{StorageBackend, StorageConfig};
+use crate::config::{StorageBackend, StorageConfig};
 
 #[async_trait]
 pub trait IdempotencyStore: Send + Sync {

@@ -1,6 +1,6 @@
 use std::fs;
 
-use mimir::config::OutputConfig;
+use crate::config::OutputConfig;
 use tempfile::tempdir;
 
 use super::{PlaceholderPolicy, render_and_write};

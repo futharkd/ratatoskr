@@ -10,16 +10,16 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use hmac::{Hmac, KeyInit, Mac};
 use http::{HeaderMap, header::HeaderValue};
-use mimir::config::{
-    AppConfig, ConfigIncludes, DefaultsConfig, InfisicalProviderConfig, LifecycleAction,
-    OutputConfig, PlaceholderPolicyOverride, ProfilePlaceholderPolicy, ProviderConfig,
-    ProviderKind, SecretSelector, SecurityProfileConfig, ServerConfig, ServiceConfig,
-    StorageBackend, StorageConfig,
-};
+use mimir::config::{MimirConfig, PlaceholderOverride};
 use sha2::Sha256;
 use tempfile::tempdir;
 
 use crate::{
+    config::{
+        AppConfig, ConfigIncludes, DefaultsConfig, InfisicalProviderConfig, LifecycleAction,
+        OutputConfig, ProviderConfig, ProviderKind, SecretSelector, SecurityProfileConfig,
+        ServerConfig, ServiceConfig, StorageBackend, StorageConfig,
+    },
     providers::{ProviderClient, SecretFetchRequest, SecretMap},
     storage::{IdempotencyStore, sqlite::SqliteIdempotencyStore},
 };
@@ -74,6 +74,7 @@ async fn deduplicates_duplicate_webhook_events() {
             postgres_url: None,
         },
         includes: ConfigIncludes::default(),
+        mimir: MimirConfig::default(),
         providers: vec![ProviderConfig {
             name: "infisical_main".to_string(),
             kind: ProviderKind::Infisical(InfisicalProviderConfig {
@@ -169,9 +170,9 @@ async fn applies_profile_placeholder_policy() {
             allow_env_vars: false,
             require_signature: true,
             replay_tolerance_seconds: Some(300),
-            placeholders: ProfilePlaceholderPolicy {
-                env: true,
-                file: false,
+            placeholders: PlaceholderOverride {
+                env: Some(true),
+                file: Some(false),
             },
         },
     );
@@ -192,6 +193,7 @@ async fn applies_profile_placeholder_policy() {
             postgres_url: None,
         },
         includes: ConfigIncludes::default(),
+        mimir: MimirConfig::default(),
         providers: vec![ProviderConfig {
             name: "infisical_main".to_string(),
             kind: ProviderKind::Infisical(InfisicalProviderConfig {
@@ -261,9 +263,9 @@ async fn service_override_takes_precedence_over_profile() {
             allow_env_vars: false,
             require_signature: true,
             replay_tolerance_seconds: Some(300),
-            placeholders: ProfilePlaceholderPolicy {
-                env: false,
-                file: false,
+            placeholders: PlaceholderOverride {
+                env: Some(false),
+                file: Some(false),
             },
         },
     );
@@ -284,6 +286,7 @@ async fn service_override_takes_precedence_over_profile() {
             postgres_url: None,
         },
         includes: ConfigIncludes::default(),
+        mimir: MimirConfig::default(),
         providers: vec![ProviderConfig {
             name: "infisical_main".to_string(),
             kind: ProviderKind::Infisical(InfisicalProviderConfig {
@@ -310,7 +313,7 @@ async fn service_override_takes_precedence_over_profile() {
             },
             lifecycle: LifecycleAction::NoAction,
             security_profile: "strict".to_string(),
-            placeholder_policy_override: Some(PlaceholderPolicyOverride {
+            placeholder_policy_override: Some(PlaceholderOverride {
                 env: Some(true),
                 file: None,
             }),

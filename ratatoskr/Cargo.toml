@@ -13,6 +13,7 @@ hex = "0.4"
 hmac = "0.13"
 http = "1"
 mimir = { path = "../mimir" }
+glob = "0.3"
 reqwest = { version = "0.13", default-features = false, features = ["json", "query", "rustls"] }
 rusqlite = { version = "0.39", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
@@ -21,6 +22,7 @@ sha2 = "0.11"
 tempfile = "3"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "time", "fs"] }
 tokio-postgres = "0.7"
+toml = "1.1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 

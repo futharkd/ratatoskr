@@ -3,10 +3,10 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::{Context, anyhow};
 use bytes::Bytes;
 use http::HeaderMap;
-use mimir::config::{AppConfig, ProviderConfig, ProviderKind};
-use mimir::placeholders::effective_placeholder_policy;
+use mimir::placeholders::apply_placeholder_override;
 
 use crate::{
+    config::{AppConfig, ProviderConfig, ProviderKind},
     orchestration::LifecycleExecutor,
     providers::{ProviderClient, SecretFetchRequest},
     render::render_and_write,
@@ -83,7 +83,13 @@ impl DispatchEngine {
                 .await
                 .with_context(|| format!("failed fetching secrets for service {}", service.name))?;
             let profile = self.config.security_profiles.get(&service.security_profile);
-            let placeholder_policy = effective_placeholder_policy(profile, service);
+            let mut placeholder_policy = self.config.mimir.placeholder_policy();
+            placeholder_policy =
+                apply_placeholder_override(placeholder_policy, profile.map(|p| &p.placeholders));
+            placeholder_policy = apply_placeholder_override(
+                placeholder_policy,
+                service.placeholder_policy_override.as_ref(),
+            );
             render_and_write(&service.output, &secrets, placeholder_policy)
                 .with_context(|| format!("failed rendering output for service {}", service.name))?;
             self.lifecycle

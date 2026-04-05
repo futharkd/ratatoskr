@@ -2,7 +2,7 @@ use std::{env, fs, path::Path};
 
 use anyhow::anyhow;
 
-use crate::config::{PlaceholderPolicyOverride, SecurityProfileConfig, ServiceConfig};
+use crate::config::PlaceholderOverride;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PlaceholderPolicy {
@@ -75,20 +75,9 @@ pub fn resolve_placeholders(input: &str, policy: PlaceholderPolicy) -> anyhow::R
     Ok(out)
 }
 
-pub fn effective_placeholder_policy(
-    profile: Option<&SecurityProfileConfig>,
-    service: &ServiceConfig,
-) -> PlaceholderPolicy {
-    let base = PlaceholderPolicy {
-        allow_env_placeholders: profile.map(|p| p.placeholders.env).unwrap_or(false),
-        allow_file_placeholders: profile.map(|p| p.placeholders.file).unwrap_or(false),
-    };
-    apply_placeholder_override(base, service.placeholder_policy_override.as_ref())
-}
-
-fn apply_placeholder_override(
+pub fn apply_placeholder_override(
     base: PlaceholderPolicy,
-    override_cfg: Option<&PlaceholderPolicyOverride>,
+    override_cfg: Option<&PlaceholderOverride>,
 ) -> PlaceholderPolicy {
     if let Some(override_cfg) = override_cfg {
         PlaceholderPolicy {
@@ -128,12 +117,9 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use crate::config::{
-        LifecycleAction, OutputConfig, ProfilePlaceholderPolicy, SecretSelector,
-        SecurityProfileConfig, ServiceConfig,
-    };
+    use crate::config::PlaceholderOverride;
 
-    use super::{PlaceholderPolicy, effective_placeholder_policy, resolve_placeholders};
+    use super::{PlaceholderPolicy, apply_placeholder_override, resolve_placeholders};
 
     #[test]
     fn resolves_env_placeholder() {
@@ -181,36 +167,16 @@ mod tests {
     }
 
     #[test]
-    fn policy_helper_applies_service_override() {
-        let profile = SecurityProfileConfig {
-            allow_env_vars: false,
-            require_signature: true,
-            replay_tolerance_seconds: Some(300),
-            placeholders: ProfilePlaceholderPolicy {
-                env: false,
-                file: false,
-            },
+    fn policy_helper_applies_override() {
+        let base = PlaceholderPolicy {
+            allow_env_placeholders: false,
+            allow_file_placeholders: false,
         };
-        let service = ServiceConfig {
-            name: "svc".to_string(),
-            provider: "infisical_main".to_string(),
-            secret_selector: SecretSelector {
-                environment: "prod".to_string(),
-                secret_path: "/".to_string(),
-                include_keys: vec![],
-            },
-            output: OutputConfig::FlatFiles {
-                directory: "/tmp/x".to_string(),
-                file_mode: None,
-            },
-            lifecycle: LifecycleAction::NoAction,
-            security_profile: "strict".to_string(),
-            placeholder_policy_override: Some(crate::config::PlaceholderPolicyOverride {
-                env: Some(true),
-                file: None,
-            }),
+        let override_cfg = PlaceholderOverride {
+            env: Some(true),
+            file: None,
         };
-        let policy = effective_placeholder_policy(Some(&profile), &service);
+        let policy = apply_placeholder_override(base, Some(&override_cfg));
         assert!(policy.allow_env_placeholders);
         assert!(!policy.allow_file_placeholders);
     }

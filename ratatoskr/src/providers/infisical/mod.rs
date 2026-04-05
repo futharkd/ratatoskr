@@ -1,4 +1,5 @@
 mod client;
+pub mod config;
 mod models;
 
-pub use client::InfisicalProvider;
+pub use config::InfisicalProviderConfig;

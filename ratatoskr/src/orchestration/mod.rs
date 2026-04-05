@@ -2,7 +2,7 @@ use anyhow::{Context, anyhow};
 use reqwest::Client;
 use serde_json::json;
 
-use mimir::config::LifecycleAction;
+use crate::config::LifecycleAction;
 
 #[derive(Clone)]
 pub struct LifecycleExecutor {

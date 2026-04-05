@@ -1,0 +1,10 @@
+[mimir.placeholders]
+env = true
+file = false
+
+[worker]
+listen_addr = "127.0.0.1:9000"
+
+[[jobs]]
+name = "sync"
+template = "token={env:API_TOKEN}"
