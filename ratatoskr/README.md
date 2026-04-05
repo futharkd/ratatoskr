@@ -6,7 +6,7 @@ Ratatoskr is a configurable Rust webhook worker for secret delivery and lifecycl
 
 - Accepts signed webhooks from providers (Infisical first).
 - Verifies HMAC-SHA256 signatures and replay window timestamps.
-- Deduplicates webhook events in SQLite for idempotent processing.
+- Deduplicates webhook events with pluggable storage backends (SQLite default, PostgreSQL supported).
 - Fetches scoped secrets through provider adapters.
 - Renders outputs per service (flat files or templated YAML today).
 - Applies lifecycle hooks (`no_action`, `reload_caddy`, `restart_container`).
@@ -29,6 +29,7 @@ Ratatoskr is data-driven:
 
 - `providers`: authentication and fetch backends.
 - `defaults`: safe baseline behavior (replay window, retries, timeout).
+- `storage`: idempotency backend (`sqlite` or `postgres`).
 - `services`: service-by-service policy:
   - selector (`environment`, `secret_path`, optional key filters)
   - render mode and destination

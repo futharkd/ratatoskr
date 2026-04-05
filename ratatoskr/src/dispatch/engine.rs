@@ -9,7 +9,7 @@ use crate::{
     orchestration::LifecycleExecutor,
     providers::{ProviderClient, SecretFetchRequest},
     render::render_and_write,
-    storage::SqliteIdempotencyStore,
+    storage::IdempotencyStore,
     verify::verify_infisical_signature,
 };
 
@@ -23,7 +23,7 @@ use super::{
 pub struct DispatchEngine {
     config: AppConfig,
     providers: HashMap<String, Arc<dyn ProviderClient>>,
-    idempotency: SqliteIdempotencyStore,
+    idempotency: Arc<dyn IdempotencyStore>,
     lifecycle: LifecycleExecutor,
 }
 
@@ -31,7 +31,7 @@ impl DispatchEngine {
     pub fn new(
         config: AppConfig,
         providers: HashMap<String, Arc<dyn ProviderClient>>,
-        idempotency: SqliteIdempotencyStore,
+        idempotency: Arc<dyn IdempotencyStore>,
     ) -> Self {
         Self {
             config,

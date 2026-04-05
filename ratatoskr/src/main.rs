@@ -14,7 +14,7 @@ use axum::{Router, routing::get};
 use config::AppConfig;
 use dispatch::DispatchEngine;
 use providers::{ProviderClient, infisical::InfisicalProvider};
-use storage::SqliteIdempotencyStore;
+use storage::build_idempotency_store;
 use tokio::net::TcpListener;
 use tracing::info;
 
@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let config = AppConfig::load(&config_path)
         .with_context(|| format!("failed loading config at {config_path}"))?;
     let providers = build_provider_map(&config);
-    let store = SqliteIdempotencyStore::new(&config.storage.sqlite_path).await?;
+    let store = build_idempotency_store(&config.storage).await?;
     let engine = DispatchEngine::new(config.clone(), providers, store);
 
     let app_state = AppState {

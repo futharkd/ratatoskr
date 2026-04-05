@@ -19,7 +19,7 @@ use crate::{
         ProviderConfig, ProviderKind, SecretSelector, ServerConfig, ServiceConfig, StorageConfig,
     },
     providers::{ProviderClient, SecretFetchRequest, SecretMap},
-    storage::SqliteIdempotencyStore,
+    storage::{IdempotencyStore, sqlite::SqliteIdempotencyStore},
 };
 
 use super::DispatchEngine;
@@ -67,7 +67,9 @@ async fn deduplicates_duplicate_webhook_events() {
             retry_backoff_millis: 300,
         },
         storage: StorageConfig {
+            backend: crate::config::StorageBackend::Sqlite,
             sqlite_path: db_path.to_string_lossy().into_owned(),
+            postgres_url: None,
         },
         providers: vec![ProviderConfig {
             name: "infisical_main".to_string(),
@@ -106,9 +108,11 @@ async fn deduplicates_duplicate_webhook_events() {
     });
     let mut providers = HashMap::<String, Arc<dyn ProviderClient>>::new();
     providers.insert("infisical_main".to_string(), provider);
-    let store = SqliteIdempotencyStore::new(&cfg.storage.sqlite_path)
-        .await
-        .unwrap();
+    let store: Arc<dyn IdempotencyStore> = Arc::new(
+        SqliteIdempotencyStore::new(&cfg.storage.sqlite_path)
+            .await
+            .unwrap(),
+    );
     let engine = DispatchEngine::new(cfg, providers, store);
 
     let body =

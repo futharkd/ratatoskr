@@ -8,7 +8,12 @@ max_retries = 3
 retry_backoff_millis = 300
 
 [storage]
+backend = "sqlite"
 sqlite_path = "./ratatoskr.db"
+
+# PostgreSQL alternative:
+# backend = "postgres"
+# postgres_url = "postgres://ratatoskr:ratatoskr@postgres:5432/ratatoskr"
 
 [[providers]]
 name = "infisical_main"
