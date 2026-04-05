@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
 use super::atomic_write::atomic_write;
-use super::placeholders::{PlaceholderPolicy, resolve_placeholders};
+use crate::placeholders::{PlaceholderPolicy, resolve_placeholders};
 
 pub(super) fn write_flat_files(
     directory: &str,

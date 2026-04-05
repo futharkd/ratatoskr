@@ -17,5 +17,5 @@ pub type SecretMap = BTreeMap<String, String>;
 pub trait ProviderClient: Send + Sync {
     async fn fetch_secrets(&self, request: SecretFetchRequest) -> anyhow::Result<SecretMap>;
     fn provider_name(&self) -> &str;
-    fn webhook_secret_env_var(&self) -> &str;
+    fn webhook_secret(&self) -> anyhow::Result<String>;
 }

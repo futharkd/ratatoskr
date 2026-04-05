@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, env, time::Duration};
+use std::{collections::BTreeMap, time::Duration};
 
 use anyhow::{Context, anyhow};
 use async_trait::async_trait;
@@ -8,6 +8,7 @@ use tokio::time::sleep;
 
 use crate::{
     config::{InfisicalProviderConfig, SecretSelector},
+    placeholders::{PlaceholderPolicy, resolve_placeholders},
     providers::{ProviderClient, SecretFetchRequest, SecretMap},
 };
 
@@ -44,10 +45,8 @@ impl InfisicalProvider {
     }
 
     async fn login(&self) -> anyhow::Result<String> {
-        let client_id = env::var(&self.config.client_id_env)
-            .with_context(|| format!("missing env var {}", self.config.client_id_env))?;
-        let client_secret = env::var(&self.config.client_secret_env)
-            .with_context(|| format!("missing env var {}", self.config.client_secret_env))?;
+        let client_id = self.resolve_provider_secret(&self.config.client_id)?;
+        let client_secret = self.resolve_provider_secret(&self.config.client_secret)?;
 
         let url = format!(
             "{}{}",
@@ -74,6 +73,15 @@ impl InfisicalProvider {
             .await
             .context("invalid infisical login response")?;
         Ok(payload.access_token)
+    }
+
+    fn resolve_provider_secret(&self, raw_value: &str) -> anyhow::Result<String> {
+        let policy = PlaceholderPolicy {
+            allow_env_placeholders: true,
+            allow_file_placeholders: true,
+        };
+        resolve_placeholders(raw_value, policy)
+            .with_context(|| "failed resolving provider placeholder values")
     }
 
     async fn fetch_with_token(
@@ -147,7 +155,7 @@ impl ProviderClient for InfisicalProvider {
         &self.name
     }
 
-    fn webhook_secret_env_var(&self) -> &str {
-        &self.config.webhook_secret_env
+    fn webhook_secret(&self) -> anyhow::Result<String> {
+        self.resolve_provider_secret(&self.config.webhook_secret)
     }
 }

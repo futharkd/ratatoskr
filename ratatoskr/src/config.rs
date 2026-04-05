@@ -132,9 +132,9 @@ pub enum ProviderKind {
 pub struct InfisicalProviderConfig {
     #[serde(default = "default_infisical_base_url")]
     pub api_base_url: String,
-    pub client_id_env: String,
-    pub client_secret_env: String,
-    pub webhook_secret_env: String,
+    pub client_id: String,
+    pub client_secret: String,
+    pub webhook_secret: String,
     #[serde(default = "default_login_path")]
     pub login_path: String,
     #[serde(default = "default_secrets_path")]
@@ -219,17 +219,23 @@ pub struct SecurityProfileConfig {
     #[serde(default)]
     pub replay_tolerance_seconds: Option<i64>,
     #[serde(default)]
-    pub allow_env_placeholders: bool,
-    #[serde(default)]
-    pub allow_file_placeholders: bool,
+    pub placeholders: ProfilePlaceholderPolicy,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct PlaceholderPolicyOverride {
     #[serde(default)]
-    pub allow_env_placeholders: Option<bool>,
+    pub env: Option<bool>,
     #[serde(default)]
-    pub allow_file_placeholders: Option<bool>,
+    pub file: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct ProfilePlaceholderPolicy {
+    #[serde(default)]
+    pub env: bool,
+    #[serde(default)]
+    pub file: bool,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -405,9 +411,9 @@ sqlite_path = "./ratatoskr.db"
 name = "infisical_main"
 type = "infisical"
 api_base_url = "https://app.infisical.com"
-client_id_env = "INFISICAL_CLIENT_ID"
-client_secret_env = "INFISICAL_CLIENT_SECRET"
-webhook_secret_env = "INFISICAL_WEBHOOK_SECRET"
+client_id = "{$INFISICAL_CLIENT_ID}"
+client_secret = "{$INFISICAL_CLIENT_SECRET}"
+webhook_secret = "{$INFISICAL_WEBHOOK_SECRET}"
 login_path = "/api/v1/auth/universal-auth/login"
 secrets_path = "/api/v3/secrets/raw"
 
@@ -447,9 +453,9 @@ output = { mode = "flat_files", directory = "/tmp/secrets", file_mode = 256 }
 name = "infisical_main"
 type = "infisical"
 api_base_url = "https://app.infisical.com"
-client_id_env = "INFISICAL_CLIENT_ID"
-client_secret_env = "INFISICAL_CLIENT_SECRET"
-webhook_secret_env = "INFISICAL_WEBHOOK_SECRET"
+client_id = "{$INFISICAL_CLIENT_ID}"
+client_secret = "{$INFISICAL_CLIENT_SECRET}"
+webhook_secret = "{$INFISICAL_WEBHOOK_SECRET}"
 login_path = "/api/v1/auth/universal-auth/login"
 secrets_path = "/api/v3/secrets/raw"
 "#,

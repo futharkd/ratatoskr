@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{Context, anyhow};
 use bytes::Bytes;
@@ -111,8 +111,9 @@ impl DispatchEngine {
         headers: &HeaderMap,
         body: &Bytes,
     ) -> anyhow::Result<()> {
-        let secret = env::var(provider.webhook_secret_env_var())
-            .with_context(|| format!("missing env var {}", provider.webhook_secret_env_var()))?;
+        let secret = provider
+            .webhook_secret()
+            .with_context(|| "failed resolving provider webhook secret")?;
 
         match &provider_cfg.kind {
             ProviderKind::Infisical(_) => {
@@ -130,8 +131,8 @@ impl DispatchEngine {
     fn effective_placeholder_policy(&self, service: &ServiceConfig) -> PlaceholderPolicy {
         let profile = self.config.security_profiles.get(&service.security_profile);
         let base = PlaceholderPolicy {
-            allow_env_placeholders: profile.map(|p| p.allow_env_placeholders).unwrap_or(false),
-            allow_file_placeholders: profile.map(|p| p.allow_file_placeholders).unwrap_or(false),
+            allow_env_placeholders: profile.map(|p| p.placeholders.env).unwrap_or(false),
+            allow_file_placeholders: profile.map(|p| p.placeholders.file).unwrap_or(false),
         };
         apply_placeholder_override(base, service.placeholder_policy_override.as_ref())
     }
@@ -143,12 +144,8 @@ fn apply_placeholder_override(
 ) -> PlaceholderPolicy {
     if let Some(override_cfg) = override_cfg {
         PlaceholderPolicy {
-            allow_env_placeholders: override_cfg
-                .allow_env_placeholders
-                .unwrap_or(base.allow_env_placeholders),
-            allow_file_placeholders: override_cfg
-                .allow_file_placeholders
-                .unwrap_or(base.allow_file_placeholders),
+            allow_env_placeholders: override_cfg.env.unwrap_or(base.allow_env_placeholders),
+            allow_file_placeholders: override_cfg.file.unwrap_or(base.allow_file_placeholders),
         }
     } else {
         base

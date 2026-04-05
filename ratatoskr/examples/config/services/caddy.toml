@@ -3,7 +3,7 @@ name = "caddy"
 provider = "infisical_main"
 security_profile = "strict"
 # Optional per-service override:
-# placeholder_policy_override = { allow_env_placeholders = true, allow_file_placeholders = false }
+# placeholder_policy_override = { env = true, file = false }
 lifecycle = { action = "reload_caddy", admin_url = "http://caddy:2019" }
 secret_selector = { environment = "prod", secret_path = "/caddy", include_keys = ["CLOUDFLARE_API_TOKEN"] }
 output = { mode = "flat_files", directory = "/run/secrets/caddy_data", file_mode = 256 }

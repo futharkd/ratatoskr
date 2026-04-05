@@ -73,13 +73,14 @@ Ratatoskr supports Caddy-style placeholders in all render outputs (`flat_files` 
 
 Security defaults are deny-by-default:
 
-- `allow_env_placeholders = false`
-- `allow_file_placeholders = false`
+- `[security_profiles.<name>.placeholders]`
+  - `env = false`
+  - `file = false`
 
 Enable per profile in `security_profiles` and optionally override per service using:
 
-- `placeholder_policy_override.allow_env_placeholders`
-- `placeholder_policy_override.allow_file_placeholders`
+- `placeholder_policy_override.env`
+- `placeholder_policy_override.file`
 
 ### Security Profiles
 

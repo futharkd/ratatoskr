@@ -2,12 +2,16 @@
 allow_env_vars = false
 require_signature = true
 replay_tolerance_seconds = 300
-allow_env_placeholders = false
-allow_file_placeholders = false
+
+[security_profiles.strict.placeholders]
+env = false
+file = false
 
 [security_profiles.env_only_allowed]
 allow_env_vars = true
 require_signature = true
 replay_tolerance_seconds = 300
-allow_env_placeholders = true
-allow_file_placeholders = false
+
+[security_profiles.env_only_allowed.placeholders]
+env = true
+file = false

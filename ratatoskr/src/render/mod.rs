@@ -1,12 +1,11 @@
 mod atomic_write;
 mod flat_files;
-mod placeholders;
 mod templated_yaml;
 
 use std::collections::BTreeMap;
 
 use crate::config::OutputConfig;
-pub use placeholders::PlaceholderPolicy;
+pub use crate::placeholders::PlaceholderPolicy;
 
 pub fn render_and_write(
     output: &OutputConfig,

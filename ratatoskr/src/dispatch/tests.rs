@@ -46,8 +46,8 @@ impl ProviderClient for MockProvider {
         "infisical_main"
     }
 
-    fn webhook_secret_env_var(&self) -> &str {
-        "TEST_WEBHOOK_SECRET"
+    fn webhook_secret(&self) -> anyhow::Result<String> {
+        Ok("top-secret".to_string())
     }
 }
 
@@ -77,9 +77,9 @@ async fn deduplicates_duplicate_webhook_events() {
             name: "infisical_main".to_string(),
             kind: ProviderKind::Infisical(InfisicalProviderConfig {
                 api_base_url: "https://app.infisical.com".to_string(),
-                client_id_env: "X".to_string(),
-                client_secret_env: "Y".to_string(),
-                webhook_secret_env: "TEST_WEBHOOK_SECRET".to_string(),
+                client_id: "x".to_string(),
+                client_secret: "y".to_string(),
+                webhook_secret: "top-secret".to_string(),
                 login_path: "/api/v1/auth/universal-auth/login".to_string(),
                 secrets_path: "/api/v3/secrets/raw".to_string(),
             }),
@@ -103,8 +103,6 @@ async fn deduplicates_duplicate_webhook_events() {
         security_profiles: Default::default(),
     };
 
-    // TODO: Audit that the environment access only happens in single-threaded code.
-    unsafe { std::env::set_var("TEST_WEBHOOK_SECRET", "top-secret") };
     let calls = Arc::new(AtomicUsize::new(0));
     let provider = Arc::new(MockProvider {
         calls: calls.clone(),
@@ -170,8 +168,10 @@ async fn applies_profile_placeholder_policy() {
             allow_env_vars: false,
             require_signature: true,
             replay_tolerance_seconds: Some(300),
-            allow_env_placeholders: true,
-            allow_file_placeholders: false,
+            placeholders: crate::config::ProfilePlaceholderPolicy {
+                env: true,
+                file: false,
+            },
         },
     );
 
@@ -195,9 +195,9 @@ async fn applies_profile_placeholder_policy() {
             name: "infisical_main".to_string(),
             kind: ProviderKind::Infisical(InfisicalProviderConfig {
                 api_base_url: "https://app.infisical.com".to_string(),
-                client_id_env: "X".to_string(),
-                client_secret_env: "Y".to_string(),
-                webhook_secret_env: "TEST_WEBHOOK_SECRET".to_string(),
+                client_id: "x".to_string(),
+                client_secret: "y".to_string(),
+                webhook_secret: "top-secret".to_string(),
                 login_path: "/api/v1/auth/universal-auth/login".to_string(),
                 secrets_path: "/api/v3/secrets/raw".to_string(),
             }),
@@ -222,8 +222,6 @@ async fn applies_profile_placeholder_policy() {
         security_profiles,
     };
 
-    // TODO: Audit that the environment access only happens in single-threaded code.
-    unsafe { std::env::set_var("TEST_WEBHOOK_SECRET", "top-secret") };
     // TODO: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("RATATOSKR_POLICY_ENV", "from-profile") };
     let provider = Arc::new(MockProvider {
@@ -262,8 +260,10 @@ async fn service_override_takes_precedence_over_profile() {
             allow_env_vars: false,
             require_signature: true,
             replay_tolerance_seconds: Some(300),
-            allow_env_placeholders: false,
-            allow_file_placeholders: false,
+            placeholders: crate::config::ProfilePlaceholderPolicy {
+                env: false,
+                file: false,
+            },
         },
     );
 
@@ -287,9 +287,9 @@ async fn service_override_takes_precedence_over_profile() {
             name: "infisical_main".to_string(),
             kind: ProviderKind::Infisical(InfisicalProviderConfig {
                 api_base_url: "https://app.infisical.com".to_string(),
-                client_id_env: "X".to_string(),
-                client_secret_env: "Y".to_string(),
-                webhook_secret_env: "TEST_WEBHOOK_SECRET".to_string(),
+                client_id: "x".to_string(),
+                client_secret: "y".to_string(),
+                webhook_secret: "top-secret".to_string(),
                 login_path: "/api/v1/auth/universal-auth/login".to_string(),
                 secrets_path: "/api/v3/secrets/raw".to_string(),
             }),
@@ -310,15 +310,13 @@ async fn service_override_takes_precedence_over_profile() {
             lifecycle: LifecycleAction::NoAction,
             security_profile: "strict".to_string(),
             placeholder_policy_override: Some(PlaceholderPolicyOverride {
-                allow_env_placeholders: Some(true),
-                allow_file_placeholders: None,
+                env: Some(true),
+                file: None,
             }),
         }],
         security_profiles,
     };
 
-    // TODO: Audit that the environment access only happens in single-threaded code.
-    unsafe { std::env::set_var("TEST_WEBHOOK_SECRET", "top-secret") };
     // TODO: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("RATATOSKR_OVERRIDE_ENV", "from-override") };
     let provider = Arc::new(MockProvider {

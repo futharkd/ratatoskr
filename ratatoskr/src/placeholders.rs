@@ -57,7 +57,6 @@ pub fn resolve_placeholders(input: &str, policy: PlaceholderPolicy) -> anyhow::R
             continue;
         }
 
-        // Reject placeholder-looking tokens with unsupported format.
         if let Some(end_rel) = input[open..].find('}') {
             let end = open + end_rel;
             let token = &input[open + 1..end];
