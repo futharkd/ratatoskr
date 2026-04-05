@@ -15,7 +15,7 @@ use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use anyhow::Context;
 use axum::{Router, routing::get};
 use tokio::net::TcpListener;
-use tracing::info;
+use tracing::{info, warn};
 
 pub use dispatch::DispatchEngine;
 
@@ -42,6 +42,33 @@ pub fn init_tracing() {
     tracing_subscriber::fmt().with_env_filter(env_filter).init();
 }
 
+/// Wait for SIGINT (Ctrl+C) or, on Unix, SIGTERM (`docker stop`, Kubernetes, systemd).
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        match tokio::signal::ctrl_c().await {
+            Ok(()) => {}
+            Err(e) => warn!(error = %e, "failed to install Ctrl+C handler"),
+        }
+    };
+
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{SignalKind, signal};
+
+        let mut sigterm =
+            signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
+        tokio::select! {
+            _ = ctrl_c => {}
+            _ = sigterm.recv() => {}
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        ctrl_c.await;
+    }
+}
+
 /// Load config from `config_path`, bind [`AppConfig::server`](config::AppConfig), and serve until shutdown.
 pub async fn run(config_path: &str) -> anyhow::Result<()> {
     let config = config::AppConfig::load(config_path)
@@ -59,7 +86,12 @@ pub async fn run(config_path: &str) -> anyhow::Result<()> {
     let addr: SocketAddr = config.server.listen_addr.parse()?;
     let listener = TcpListener::bind(addr).await?;
     info!("ratatoskr listening on {}", config.server.listen_addr);
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(async {
+            shutdown_signal().await;
+            info!("shutdown signal received, draining open connections");
+        })
+        .await?;
     Ok(())
 }
 
